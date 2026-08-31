@@ -1,0 +1,243 @@
+import { useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useAlmacen } from '../lib/almacen.jsx'
+import { ESTADOS_TAREA, estadoProyecto, prioridad, tareaVacia } from '../data/modelo.js'
+import { avanceProyecto, nombrePorId, tareasDeProyecto } from '../lib/calculos.js'
+import { diasRestantes, formatearFecha } from '../lib/formato.js'
+import { Avatar, Barra, Etiqueta, Modal, Vacio } from '../components/Piezas.jsx'
+import FormularioProyecto from '../components/FormularioProyecto.jsx'
+
+export default function DetalleProyecto() {
+  const { id } = useParams()
+  const navegar = useNavigate()
+  const {
+    proyectos, colaboradores, tareas,
+    guardarProyecto, eliminarProyecto, guardarTarea, eliminarTarea,
+  } = useAlmacen()
+
+  const [editando, setEditando] = useState(false)
+  const [nuevaTarea, setNuevaTarea] = useState('')
+  const [asignadoNueva, setAsignadoNueva] = useState('')
+  const [limiteNueva, setLimiteNueva] = useState('')
+
+  const proyecto = proyectos.find((p) => p.id === id)
+
+  if (!proyecto) {
+    return (
+      <Vacio
+        titulo="Proyecto no encontrado"
+        texto="Puede que se haya eliminado."
+        accion={<Link className="boton" to="/proyectos">Volver a proyectos</Link>}
+      />
+    )
+  }
+
+  const propias = tareasDeProyecto(proyecto.id, tareas)
+  const avance = avanceProyecto(proyecto, tareas)
+  const equipo = proyecto.colaboradorIds
+    .map((cid) => colaboradores.find((c) => c.id === cid))
+    .filter(Boolean)
+  const dias = diasRestantes(proyecto.fechaFin)
+
+  function agregarTarea(e) {
+    e.preventDefault()
+    if (!nuevaTarea.trim()) return
+    guardarTarea({
+      ...tareaVacia(proyecto.id),
+      titulo: nuevaTarea.trim(),
+      asignadoId: asignadoNueva,
+      fechaLimite: limiteNueva,
+    })
+    setNuevaTarea('')
+    setLimiteNueva('')
+  }
+
+  function borrarProyecto() {
+    if (!confirm(`¿Eliminar "${proyecto.nombre}" y sus ${propias.length} tarea(s)?`)) return
+    eliminarProyecto(proyecto.id)
+    navegar('/proyectos')
+  }
+
+  return (
+    <>
+      <Link className="mini suave" to="/proyectos">← Proyectos</Link>
+
+      <div className="encabezado" style={{ marginTop: 10 }}>
+        <div>
+          <h1>{proyecto.nombre}</h1>
+          <div className="envuelve" style={{ marginTop: 8 }}>
+            <Etiqueta item={estadoProyecto(proyecto.estado)} />
+            <Etiqueta item={prioridad(proyecto.prioridad)} />
+            {proyecto.cliente && <span className="chip">{proyecto.cliente}</span>}
+          </div>
+        </div>
+        <div className="acciones">
+          <button className="boton" onClick={() => setEditando(true)}>Editar</button>
+          <button className="boton peligro" onClick={borrarProyecto}>Eliminar</button>
+        </div>
+      </div>
+
+      <div className="rejilla dos">
+        <section className="tarjeta">
+          <h2 style={{ marginBottom: 12 }}>Ficha</h2>
+
+          {proyecto.descripcion && <p style={{ marginTop: 0 }}>{proyecto.descripcion}</p>}
+
+          <div className="entre mini suave" style={{ marginBottom: 5 }}>
+            <span>Avance</span>
+            <span>{avance}%</span>
+          </div>
+          <Barra valor={avance} />
+
+          <table className="tabla" style={{ marginTop: 16 }}>
+            <tbody>
+              <tr>
+                <td className="suave">Inicio</td>
+                <td>{formatearFecha(proyecto.fechaInicio)}</td>
+              </tr>
+              <tr>
+                <td className="suave">Entrega</td>
+                <td>
+                  {formatearFecha(proyecto.fechaFin)}{' '}
+                  {dias !== null && proyecto.estado !== 'completado' && (
+                    <span className={`mini ${dias < 0 ? 'vencida' : dias <= 14 ? 'proxima' : 'suave'}`}>
+                      ({dias < 0 ? `${Math.abs(dias)} días de retraso` : dias === 0 ? 'es hoy' : `faltan ${dias} días`})
+                    </span>
+                  )}
+                </td>
+              </tr>
+              <tr>
+                <td className="suave">Responsable</td>
+                <td>
+                  {proyecto.responsableId ? (
+                    <Link className="linea" to={`/colaboradores/${proyecto.responsableId}`}>
+                      <Avatar nombre={nombrePorId(colaboradores, proyecto.responsableId)} tam="sm" />
+                      {nombrePorId(colaboradores, proyecto.responsableId)}
+                    </Link>
+                  ) : (
+                    <span className="suave">Sin asignar</span>
+                  )}
+                </td>
+              </tr>
+              <tr>
+                <td className="suave">Tareas</td>
+                <td>{propias.filter((t) => t.estado === 'completada').length} de {propias.length} completadas</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section className="tarjeta">
+          <h2 style={{ marginBottom: 12 }}>Equipo ({equipo.length})</h2>
+          {equipo.length === 0 ? (
+            <p className="suave mini">Nadie asignado todavía. Edita el proyecto para agregar personas.</p>
+          ) : (
+            equipo.map((c) => (
+              <Link
+                key={c.id}
+                to={`/colaboradores/${c.id}`}
+                className="linea"
+                style={{ padding: '8px 0', borderBottom: '1px solid var(--borde)' }}
+              >
+                <Avatar nombre={c.nombre} />
+                <span>
+                  <div>
+                    {c.nombre}
+                    {c.id === proyecto.responsableId && <span className="chip" style={{ marginLeft: 6 }}>Responsable</span>}
+                  </div>
+                  <span className="mini suave">{c.rol || 'Sin rol'}</span>
+                </span>
+              </Link>
+            ))
+          )}
+        </section>
+      </div>
+
+      <section className="tarjeta" style={{ marginTop: 14 }}>
+        <h2 style={{ marginBottom: 12 }}>Tareas</h2>
+
+        <form onSubmit={agregarTarea} className="filtros" style={{ marginBottom: 14 }}>
+          <input
+            style={{ flex: 1, minWidth: 220 }}
+            placeholder="Nueva tarea…"
+            value={nuevaTarea}
+            onChange={(e) => setNuevaTarea(e.target.value)}
+          />
+          <select value={asignadoNueva} onChange={(e) => setAsignadoNueva(e.target.value)}>
+            <option value="">Sin asignar</option>
+            {equipo.map((c) => (
+              <option key={c.id} value={c.id}>{c.nombre}</option>
+            ))}
+          </select>
+          <input type="date" value={limiteNueva} onChange={(e) => setLimiteNueva(e.target.value)} />
+          <button className="boton primario" type="submit">Agregar</button>
+        </form>
+
+        {propias.length === 0 ? (
+          <p className="suave mini">Sin tareas. Agrega la primera arriba.</p>
+        ) : (
+          <div className="lista-tareas">
+            {propias.map((t) => {
+              const d = diasRestantes(t.fechaLimite)
+              const hecha = t.estado === 'completada'
+              return (
+                <div key={t.id} className="tarea">
+                  <input
+                    type="checkbox"
+                    checked={hecha}
+                    aria-label={`Marcar "${t.titulo}" como completada`}
+                    onChange={() =>
+                      guardarTarea({ ...t, estado: hecha ? 'pendiente' : 'completada' })
+                    }
+                  />
+                  <span className="titulo">
+                    <div className={hecha ? 'tachado' : ''}>{t.titulo}</div>
+                    <span className="mini suave">
+                      {t.asignadoId ? nombrePorId(colaboradores, t.asignadoId) : 'Sin asignar'}
+                      {t.fechaLimite && ` · ${formatearFecha(t.fechaLimite)}`}
+                    </span>
+                    {!hecha && d !== null && d <= 7 && (
+                      <span className={`mini ${d < 0 ? 'vencida' : 'proxima'}`}>
+                        {' '}{d < 0 ? '· vencida' : d === 0 ? '· vence hoy' : `· vence en ${d} d.`}
+                      </span>
+                    )}
+                  </span>
+                  <select
+                    value={t.estado}
+                    onChange={(e) => guardarTarea({ ...t, estado: e.target.value })}
+                    style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid var(--borde)', background: 'var(--superficie)', color: 'var(--texto)', fontSize: 12 }}
+                  >
+                    {ESTADOS_TAREA.map((e) => (
+                      <option key={e.id} value={e.id}>{e.nombre}</option>
+                    ))}
+                  </select>
+                  <button
+                    className="boton sm peligro"
+                    onClick={() => eliminarTarea(t.id)}
+                    aria-label={`Eliminar ${t.titulo}`}
+                  >
+                    ✕
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </section>
+
+      {editando && (
+        <Modal titulo="Editar proyecto" onCerrar={() => setEditando(false)}>
+          <FormularioProyecto
+            inicial={proyecto}
+            colaboradores={colaboradores}
+            onCancelar={() => setEditando(false)}
+            onGuardar={(p) => {
+              guardarProyecto(p)
+              setEditando(false)
+            }}
+          />
+        </Modal>
+      )}
+    </>
+  )
+}
