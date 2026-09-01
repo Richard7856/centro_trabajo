@@ -1,16 +1,20 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useDatos } from '../lib/datos.jsx'
-import { ESTADOS_PROYECTO, color, estadoProyecto, rol as rolPorId } from '../data/modelo.js'
-import { avance, resumen, vencimientos } from '../lib/calculos.js'
+import {
+  ESTADOS_PROYECTO, color, dinero, estadoProyecto, rol as rolPorId,
+} from '../data/modelo.js'
+import {
+  avance, entregasEnRiesgo, ingresos, resumen, resumenCobros, vencimientos,
+} from '../lib/calculos.js'
 import { formatearFecha } from '../lib/formato.js'
 import { Barra, Etiqueta } from '../components/Piezas.jsx'
 
-function Kpi({ etiqueta, valor }) {
+function Kpi({ etiqueta, valor, tono }) {
   return (
     <div className="tarjeta">
       <div className="kpi-etiqueta">{etiqueta}</div>
-      <div className="kpi-valor">{valor}</div>
+      <div className="kpi-valor" style={tono ? { color: tono } : undefined}>{valor}</div>
     </div>
   )
 }
@@ -52,8 +56,8 @@ function Arranque() {
 
 export default function Panel() {
   const {
-    espacios, proyectos, tareas, espacioId, espacioActivo,
-    permisosEn, setEspacioId, cargando,
+    espacios, proyectos, tareas, entregas, cobros, suscripciones,
+    espacioId, espacioActivo, permisosEn, setEspacioId, cargando,
   } = useDatos()
 
   if (!cargando && espacios.length === 0) {
@@ -68,6 +72,11 @@ export default function Panel() {
   const r = resumen(proyectos, tareas)
   const proximos = vencimientos(proyectos, tareas).slice(0, 8)
   const solicitudes = tareas.filter((t) => t.status === 'inbox')
+  const riesgo = entregasEnRiesgo(entregas)
+  const ing = ingresos(suscripciones)
+  const cob = resumenCobros(cobros)
+  const hayDinero = espacios.some((e) => permisosEn(e.id).verDinero)
+  const nombreProyecto = (id) => proyectos.find((p) => p.id === id)?.name ?? ''
 
   const activos = [...proyectos]
     .filter((p) => p.status === 'activo')
@@ -89,11 +98,55 @@ export default function Panel() {
 
       <div className="rejilla kpi" style={{ marginBottom: 18 }}>
         <Kpi etiqueta="Proyectos activos" valor={r.activos} />
-        <Kpi etiqueta="Completados" valor={r.completados} />
         <Kpi etiqueta="Tareas abiertas" valor={r.abiertas} />
         <Kpi etiqueta="Solicitudes" valor={r.solicitudes} />
-        <Kpi etiqueta="Espacios" valor={espacios.length} />
+        {hayDinero ? (
+          <>
+            <Kpi etiqueta="Ingreso mensual" valor={dinero(ing.mensual, ing.moneda)} />
+            <Kpi
+              etiqueta="Vencido"
+              valor={dinero(cob.montoVencido, cob.moneda)}
+              tono={cob.montoVencido > 0 ? 'var(--peligro)' : undefined}
+            />
+          </>
+        ) : (
+          <>
+            <Kpi etiqueta="Completados" valor={r.completados} />
+            <Kpi etiqueta="Espacios" valor={espacios.length} />
+          </>
+        )}
       </div>
+
+      {(riesgo.length > 0 || (hayDinero && cob.vencidos > 0)) && (
+        <section className="tarjeta" style={{ marginBottom: 14, borderColor: 'var(--peligro)' }}>
+          <h2 style={{ marginBottom: 10 }}>Requiere atención</h2>
+          {riesgo.slice(0, 5).map((e) => (
+            <Link
+              key={e.id}
+              to={`/proyectos/${e.project_id}`}
+              className="entre"
+              style={{ padding: '7px 0', borderBottom: '1px solid var(--borde)' }}
+            >
+              <span style={{ minWidth: 0 }}>
+                <div className="recorte">{e.title}</div>
+                <span className="mini suave">Entrega · {nombreProyecto(e.project_id)}</span>
+              </span>
+              <span className={`mini ${e.dias < 0 ? 'vencida' : 'proxima'}`}>
+                {e.dias < 0 ? `${Math.abs(e.dias)} d. tarde` : e.dias === 0 ? 'Hoy' : `en ${e.dias} d.`}
+              </span>
+            </Link>
+          ))}
+          {hayDinero && cob.vencidos > 0 && (
+            <Link className="entre" to="/cobros" style={{ padding: '7px 0' }}>
+              <span>
+                <div>{cob.vencidos} cobro(s) vencido(s)</div>
+                <span className="mini suave">Ir a Cobros →</span>
+              </span>
+              <strong className="mini vencida">{dinero(cob.montoVencido, cob.moneda)}</strong>
+            </Link>
+          )}
+        </section>
+      )}
 
       {!espacioId && (
         <section className="tarjeta" style={{ marginBottom: 14 }}>

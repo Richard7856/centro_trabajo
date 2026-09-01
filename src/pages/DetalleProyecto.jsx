@@ -5,9 +5,10 @@ import { PESO_PRIORIDAD, color, estadoProyecto } from '../data/modelo.js'
 import { avance, tareasDe } from '../lib/calculos.js'
 import { repoTexto } from '../lib/github.js'
 import { diasRestantes, formatearFecha } from '../lib/formato.js'
-import { Barra, Etiqueta, Modal, Vacio } from '../components/Piezas.jsx'
+import { Avatar, Barra, Etiqueta, Modal, Vacio } from '../components/Piezas.jsx'
 import FormularioProyecto from '../components/FormularioProyecto.jsx'
 import ListaTareas from '../components/ListaTareas.jsx'
+import Entregas from '../components/Entregas.jsx'
 import Commits from '../components/Commits.jsx'
 
 export default function DetalleProyecto() {
@@ -16,6 +17,8 @@ export default function DetalleProyecto() {
   const {
     proyectos, todosLosProyectos, tareas, todasLasTareas, espacios, permisosEn,
     guardarProyecto, eliminarProyecto, crearTarea, guardarTarea, eliminarTarea,
+    entregasDe, crearEntrega, guardarEntrega, eliminarEntrega,
+    clientesDe, darAccesoCliente, quitarAccesoCliente, miembrosDe, personas, nombreDe,
   } = useDatos()
 
   const [editando, setEditando] = useState(false)
@@ -159,6 +162,101 @@ export default function DetalleProyecto() {
           <Commits proyectoId={proyecto.id} repoUrl={proyecto.repo_url} />
         </section>
       </div>
+
+      <section className="tarjeta" style={{ marginTop: 14 }}>
+        <h2 style={{ marginBottom: 12 }}>Entregas</h2>
+        <p className="mini suave" style={{ marginTop: 0 }}>
+          Los pasos que se le prometen al cliente. Las tareas de abajo son el
+          trabajo interno para llegar a ellos.
+        </p>
+        <Entregas
+          entregas={entregasDe(proyecto.id)}
+          permisos={permisos}
+          onCrear={(campos) => intentar(() => crearEntrega({ ...campos, project_id: proyecto.id }))}
+          onCambiar={(e, campos) => intentar(() => guardarEntrega({ id: e.id, ...campos }))}
+          onEliminar={(e) =>
+            confirm(`¿Eliminar la entrega "${e.title}"?`) &&
+            intentar(() => eliminarEntrega(e.id))
+          }
+        />
+      </section>
+
+      {permisos.gestionarEntregas && (
+        <section className="tarjeta" style={{ marginTop: 14 }}>
+          <h2 style={{ marginBottom: 12 }}>Acceso de clientes</h2>
+          <p className="mini suave" style={{ marginTop: 0 }}>
+            Un cliente del espacio no ve nada hasta que se le da acceso a un
+            proyecto concreto, y solo ve ese.
+          </p>
+
+          {(() => {
+            const conAcceso = clientesDe(proyecto.id)
+            const clientesDelEspacio = miembrosDe(proyecto.space_id)
+              .filter((m) => m.role === 'cliente')
+            const yaTienen = new Set(conAcceso.map((c) => c.user_id))
+            const disponibles = clientesDelEspacio.filter((m) => !yaTienen.has(m.user_id))
+
+            if (clientesDelEspacio.length === 0) {
+              return (
+                <p className="suave mini" style={{ marginBottom: 0 }}>
+                  Este espacio no tiene miembros con rol de cliente todavía.
+                  Agrégalos desde <Link to={`/espacios/${proyecto.space_id}`}>la ficha del espacio</Link>.
+                </p>
+              )
+            }
+
+            return (
+              <>
+                {conAcceso.length === 0 ? (
+                  <p className="suave mini">Ningún cliente tiene acceso a este proyecto.</p>
+                ) : (
+                  conAcceso.map((c) => (
+                    <div key={c.id} className="entre" style={{ padding: '8px 0', borderBottom: '1px solid var(--borde)' }}>
+                      <span className="linea">
+                        <Avatar nombre={nombreDe(c.user_id) ?? '?'} tam="sm" />
+                        <span>
+                          <div>{nombreDe(c.user_id) ?? 'Cuenta'}</div>
+                          <span className="mini suave">
+                            {personas.find((p) => p.id === c.user_id)?.email ?? ''}
+                          </span>
+                        </span>
+                      </span>
+                      <button
+                        className="boton sm peligro"
+                        onClick={() =>
+                          confirm('¿Quitarle el acceso a este proyecto?') &&
+                          intentar(() => quitarAccesoCliente(c.id))
+                        }
+                      >
+                        Quitar acceso
+                      </button>
+                    </div>
+                  ))
+                )}
+
+                {disponibles.length > 0 && (
+                  <div className="filtros" style={{ marginTop: 12, marginBottom: 0 }}>
+                    <select
+                      className="mini-select"
+                      value=""
+                      onChange={(e) =>
+                        e.target.value && intentar(() => darAccesoCliente(proyecto.id, e.target.value))
+                      }
+                    >
+                      <option value="">Dar acceso a…</option>
+                      {disponibles.map((m) => (
+                        <option key={m.user_id} value={m.user_id}>
+                          {nombreDe(m.user_id) ?? m.user_id}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </>
+            )
+          })()}
+        </section>
+      )}
 
       <section className="tarjeta" style={{ marginTop: 14 }}>
         <h2 style={{ marginBottom: 4 }}>Tareas</h2>

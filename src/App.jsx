@@ -10,6 +10,8 @@ import DetalleEspacio from './pages/DetalleEspacio.jsx'
 import Proyectos from './pages/Proyectos.jsx'
 import DetalleProyecto from './pages/DetalleProyecto.jsx'
 import Bandeja from './pages/Bandeja.jsx'
+import Calendario from './pages/Calendario.jsx'
+import Cobros from './pages/Cobros.jsx'
 import Ajustes from './pages/Ajustes.jsx'
 
 function Enlace({ a, children, conteo }) {
@@ -23,7 +25,10 @@ function Enlace({ a, children, conteo }) {
 
 export default function App() {
   const { cargando: cargandoSesion, sesion, perfil, correo, salir } = useSesion()
-  const { espacios, proyectos, tareas, espacioId, setEspacioId, cargando, error } = useDatos()
+  const {
+    espacios, proyectos, tareas, cobros, espacioId, setEspacioId,
+    cargando, error, permisosEn,
+  } = useDatos()
 
   if (cargandoSesion) {
     return <div className="portada"><p className="suave">Cargando…</p></div>
@@ -33,6 +38,9 @@ export default function App() {
   if (!sesion) return <Entrar />
 
   const solicitudes = tareas.filter((t) => t.status === 'inbox').length
+  const vencidos = cobros.filter((c) => c.status === 'vencido').length
+  // La sección de dinero solo aparece para quien manda en algún espacio.
+  const hayDinero = espacios.some((e) => permisosEn(e.id).verDinero)
 
   return (
     <div className="app">
@@ -61,6 +69,8 @@ export default function App() {
           <Enlace a="/">Panel</Enlace>
           <Enlace a="/proyectos" conteo={proyectos.length}>Proyectos</Enlace>
           <Enlace a="/bandeja" conteo={solicitudes}>Bandeja</Enlace>
+          <Enlace a="/calendario">Calendario</Enlace>
+          {hayDinero && <Enlace a="/cobros" conteo={vencidos}>Cobros</Enlace>}
           <Enlace a="/espacios" conteo={espacios.length}>Espacios</Enlace>
           <Enlace a="/ajustes">Ajustes</Enlace>
         </nav>
@@ -99,6 +109,8 @@ export default function App() {
             <Route path="/proyectos" element={<Proyectos />} />
             <Route path="/proyectos/:id" element={<DetalleProyecto />} />
             <Route path="/bandeja" element={<Bandeja />} />
+            <Route path="/calendario" element={<Calendario />} />
+            <Route path="/cobros" element={<Cobros />} />
             <Route path="/ajustes" element={<Ajustes />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

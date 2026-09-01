@@ -11,7 +11,10 @@ import { permisos } from '../data/modelo.js'
 
 const DatosContexto = createContext(null)
 
-const VACIO = { espacios: [], miembros: [], proyectos: [], tareas: [], personas: [] }
+const VACIO = {
+  espacios: [], miembros: [], proyectos: [], tareas: [], personas: [],
+  entregas: [], suscripciones: [], cobros: [], miembrosProyecto: [],
+}
 
 export function ProveedorDatos({ children }) {
   const { usuarioId } = useSesion()
@@ -30,15 +33,28 @@ export function ProveedorDatos({ children }) {
     setCargando(true)
     setError('')
     try {
-      const [espacios, miembros, proyectos, tareas, personas] = await Promise.all([
+      // Las suscripciones y los cobros solo los devuelve la base a quien manda
+      // en algún espacio; para el resto llegan vacíos y no hay nada que ocultar.
+      const [
+        espacios, miembros, proyectos, tareas, personas,
+        entregas, suscripciones, cobros, miembrosProyecto,
+      ] = await Promise.all([
         supabase.from('spaces').select('*').order('created_at'),
         supabase.from('space_members').select('*'),
         supabase.from('projects').select('*').order('position').order('created_at'),
         supabase.from('tasks').select('*').order('due_date', { nullsFirst: false }),
         supabase.from('profiles').select('id, email, full_name, avatar_url, kind'),
+        supabase.from('milestones').select('*').order('position').order('due_date', { nullsFirst: false }),
+        supabase.from('subscriptions').select('*').order('created_at'),
+        supabase.from('subscription_charges').select('*').order('due_date'),
+        supabase.from('project_members').select('*'),
       ])
 
-      const fallo = [espacios, miembros, proyectos, tareas, personas].find((r) => r.error)
+      const respuestas = [
+        espacios, miembros, proyectos, tareas, personas,
+        entregas, suscripciones, cobros, miembrosProyecto,
+      ]
+      const fallo = respuestas.find((r) => r.error)
       if (fallo) throw fallo.error
 
       setDatos({
@@ -47,6 +63,10 @@ export function ProveedorDatos({ children }) {
         proyectos: proyectos.data ?? [],
         tareas: tareas.data ?? [],
         personas: personas.data ?? [],
+        entregas: entregas.data ?? [],
+        suscripciones: suscripciones.data ?? [],
+        cobros: cobros.data ?? [],
+        miembrosProyecto: miembrosProyecto.data ?? [],
       })
     } catch (e) {
       setError(traducir(e))
@@ -59,7 +79,10 @@ export function ProveedorDatos({ children }) {
   useEffect(() => { recargar() }, [recargar])
 
   const api = useMemo(() => {
-    const { espacios, miembros, proyectos, tareas, personas } = datos
+    const {
+      espacios, miembros, proyectos, tareas, personas,
+      entregas, suscripciones, cobros, miembrosProyecto,
+    } = datos
 
     const rolEn = (id) =>
       miembros.find((m) => m.space_id === id && m.user_id === usuarioId)?.role ?? null
@@ -71,6 +94,17 @@ export function ProveedorDatos({ children }) {
     const tareasVisibles = espacioId
       ? tareas.filter((t) => t.space_id === espacioId)
       : tareas
+
+    const idsProyectosVisibles = new Set(proyectosVisibles.map((p) => p.id))
+    const entregasVisibles = espacioId
+      ? entregas.filter((e) => idsProyectosVisibles.has(e.project_id))
+      : entregas
+    const suscripcionesVisibles = espacioId
+      ? suscripciones.filter((s) => s.space_id === espacioId)
+      : suscripciones
+    const cobrosVisibles = espacioId
+      ? cobros.filter((c) => c.space_id === espacioId)
+      : cobros
 
     // Toda escritura vuelve a leer: así la pantalla muestra lo que la base
     // aceptó, no lo que nosotros supusimos.
@@ -85,8 +119,13 @@ export function ProveedorDatos({ children }) {
       espacios, miembros, personas,
       proyectos: proyectosVisibles,
       tareas: tareasVisibles,
+      entregas: entregasVisibles,
+      suscripciones: suscripcionesVisibles,
+      cobros: cobrosVisibles,
+      miembrosProyecto,
       todosLosProyectos: proyectos,
       todasLasTareas: tareas,
+      todasLasEntregas: entregas,
 
       espacioId, espacioActivo, setEspacioId,
       rolEn,
@@ -111,6 +150,17 @@ export function ProveedorDatos({ children }) {
       eliminarEspacio: (id) =>
         escribir(supabase.from('spaces').delete().eq('id', id)),
 
+      // Suma a alguien por su correo. Devuelve 'sin_cuenta' si esa persona
+      // todavía no se ha registrado, para poder decírselo con claridad.
+      agregarMiembro: async (space_id, email, rol) => {
+        const { data, error: err } = await supabase.rpc('agregar_miembro', {
+          p_space: space_id, p_email: email, p_rol: rol,
+        })
+        if (err) throw new Error(traducir(err))
+        if (data?.estado === 'agregado') await recargar()
+        return data
+      },
+
       guardarMiembro: ({ id, ...campos }) =>
         id
           ? escribir(supabase.from('space_members').update(campos).eq('id', id))
@@ -124,6 +174,56 @@ export function ProveedorDatos({ children }) {
         escribir(supabase.from('projects').update(campos).eq('id', id)),
       eliminarProyecto: (id) =>
         escribir(supabase.from('projects').delete().eq('id', id)),
+
+      entregasDe: (proyectoId) =>
+        entregas.filter((e) => e.project_id === proyectoId),
+      clientesDe: (proyectoId) =>
+        miembrosProyecto.filter((m) => m.project_id === proyectoId),
+
+      crearEntrega: (campos) =>
+        escribir(supabase.from('milestones').insert({ ...campos, created_by: usuarioId })),
+      guardarEntrega: ({ id, ...campos }) =>
+        escribir(supabase.from('milestones').update(campos).eq('id', id)),
+      eliminarEntrega: (id) =>
+        escribir(supabase.from('milestones').delete().eq('id', id)),
+
+      darAccesoCliente: (project_id, user_id) =>
+        escribir(supabase.from('project_members').insert({ project_id, user_id })),
+      quitarAccesoCliente: (id) =>
+        escribir(supabase.from('project_members').delete().eq('id', id)),
+
+      crearSuscripcion: async (campos) => {
+        const { data, error: err } = await supabase
+          .from('subscriptions')
+          .insert({ ...campos, created_by: usuarioId })
+          .select()
+          .single()
+        if (err) throw new Error(traducir(err))
+        // Al dar de alta se genera el calendario de cobros del año siguiente.
+        await supabase.rpc('generar_cobros', { p_sub: data.id })
+        await recargar()
+        return data
+      },
+      guardarSuscripcion: async ({ id, ...campos }) => {
+        const { error: err } = await supabase.from('subscriptions').update(campos).eq('id', id)
+        if (err) throw new Error(traducir(err))
+        await supabase.rpc('generar_cobros', { p_sub: id })
+        await recargar()
+      },
+      eliminarSuscripcion: (id) =>
+        escribir(supabase.from('subscriptions').delete().eq('id', id)),
+
+      guardarCobro: ({ id, ...campos }) =>
+        escribir(supabase.from('subscription_charges').update(campos).eq('id', id)),
+
+      // Extiende el calendario y marca lo que ya se pasó de fecha.
+      refrescarCobros: async () => {
+        for (const s of suscripciones.filter((x) => x.status === 'activa')) {
+          await supabase.rpc('generar_cobros', { p_sub: s.id })
+        }
+        await supabase.rpc('marcar_vencidos')
+        await recargar()
+      },
 
       crearTarea: (campos) =>
         escribir(supabase.from('tasks').insert({ ...campos, created_by: usuarioId })),

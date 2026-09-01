@@ -15,14 +15,56 @@ cero en todas las tablas, y un socio del espacio «Jose» recibe un solo espacio
 
 ## Roles
 
-| Rol | Alcance | Proyectos | Pedir | Agendar y cerrar | Miembros |
-|---|---|---|---|---|---|
-| Dueño | Todo el espacio | sí | sí | sí | sí |
-| Socio | Todo el espacio | sí | sí | sí | no |
-| Invitado | Consulta el espacio | no | sí | no | no |
+| Rol | Alcance | Proyectos | Pedir | Agendar y cerrar | Ve el dinero | Miembros |
+|---|---|---|---|---|---|---|
+| Dueño | Todo el espacio | sí | sí | sí | sí | sí |
+| Socio | Todo el espacio | sí | sí | sí | sí | no |
+| Invitado | Todo el espacio | no | sí | no | no | no |
+| Cliente | **Solo los proyectos donde se le da acceso** | no | sí | no | no | no |
 
-Un invitado puede levantar solicitudes (`inbox`, sin fecha) y nada más: lo
-impide la política `tasks_insert`, no el botón.
+Lo impiden las políticas, no los botones. Comprobado con cuentas de prueba en
+un mismo espacio con dos proyectos:
+
+| | Socio | Cliente con acceso a un proyecto |
+|---|---|---|
+| Proyectos | 2 | **1** |
+| Entregas | 4 (incluida una marcada interna) | **2** |
+| Tareas | 23, de las cuales 6 sueltas del espacio | 8, **0** sueltas |
+| Suscripciones y cobros | 1 | **0** |
+
+Además: el cliente no puede editar una entrega, sí puede levantar una
+solicitud, y no puede agendarla con fecha.
+
+## Entregas, tareas y cobros
+
+Tres cosas distintas a propósito:
+
+- **Entregas** (`milestones`): los pasos que se le prometen al cliente, con
+  fecha y estado. Una entrega puede marcarse **interna** y entonces el cliente
+  no la ve.
+- **Tareas** (`tasks`): el trabajo para llegar a esas entregas. Una tarea sin
+  proyecto es trabajo suelto del espacio y nunca la ve un cliente.
+- **Cobros** (`subscriptions` + `subscription_charges`): lo que se factura.
+
+Los cobros no se calculan al vuelo: `generar_cobros()` crea una fila por
+periodo, así el calendario, los vencidos y lo cobrado salen del mismo sitio. El
+día de cobro se respeta sin arrastre — si es 31 y febrero no llega, se cobra el
+28, y en marzo vuelve al 31.
+
+El **Calendario** junta las tres en una vista mensual; el **Panel** levanta lo
+que va tarde.
+
+## Sumar personas a un espacio
+
+Desde la ficha del espacio, el dueño escribe el correo y elige el rol. La
+persona debe haber creado su cuenta antes: no se inventan cuentas.
+
+Se hace con la función `agregar_miembro()` y no con un INSERT desde la pantalla,
+porque la política de `profiles` solo deja ver a quien ya comparte espacio
+contigo — el dueño no alcanzaría a buscar a alguien recién registrado.
+
+Un **cliente** además no ve nada hasta que se le da acceso a un proyecto
+concreto, desde la ficha de ese proyecto.
 
 ## Correr en local
 
@@ -135,16 +177,15 @@ dice qué falta, en lugar de un error opaco.
 
 ## Qué falta
 
-- **Rol de cliente.** El enum es `owner | socio | invitado` y un invitado
-  alcanza todos los proyectos del espacio. Para que un cliente vea solo el suyo
-  hacen falta el rol nuevo, una tabla de acceso por proyecto y ajustar
-  `projects_select` y `tasks_select`.
 - **Invitaciones por correo.** La tabla `invitations` existe y tiene políticas,
-  pero no está conectada a la pantalla: hoy alguien se suma creando su cuenta y
-  agregándolo el dueño desde la ficha del espacio.
-- **Commits de repositorios privados**, según lo anterior.
-- **Asignar responsables** a proyectos y tareas: el esquema todavía no guarda a
+  pero no está conectada: hoy la persona crea su cuenta y el dueño la suma por
+  correo desde la ficha del espacio.
+- **Asignar responsables** a tareas y entregas: el esquema todavía no guarda a
   quién le toca cada cosa.
+- **Cobro real.** Los cobros se marcan pagados a mano; no hay pasarela conectada.
+- **Borrar una persona** que ya creó tareas falla por la llave foránea de
+  `tasks.created_by`, que existe para no perder la autoría. Quitarla del espacio
+  sí funciona.
 
 ## Estructura
 
@@ -159,8 +200,9 @@ src/
 │   ├── github.js        Lectura de commits
 │   └── formato.js       Fechas, iniciales y colores
 ├── data/modelo.js       Catálogos (idénticos a los enums) y permisos
-├── components/          Piezas, formularios, lista de tareas, commits
-└── pages/               Entrar, Panel, Espacios, Proyectos, Bandeja, Ajustes
+├── components/          Piezas, formularios, tareas, entregas, commits
+└── pages/               Entrar, Panel, Espacios, Proyectos, Bandeja,
+                         Calendario, Cobros, Ajustes
 
 supabase/migraciones/    Esquema, políticas, siembra y endurecimiento
 ```

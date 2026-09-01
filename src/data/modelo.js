@@ -47,7 +47,13 @@ export const ROLES = [
     id: 'invitado',
     nombre: 'Invitado',
     color: '#0891b2',
-    descripcion: 'Consulta el espacio y puede levantar solicitudes, no cerrarlas.',
+    descripcion: 'Consulta todo el espacio y puede levantar solicitudes, no cerrarlas.',
+  },
+  {
+    id: 'cliente',
+    nombre: 'Cliente',
+    color: '#ea580c',
+    descripcion: 'Solo los proyectos donde se le da acceso. No ve el resto del espacio ni el dinero.',
   },
 ]
 
@@ -88,6 +94,7 @@ export function permisos(rolEspacio) {
     rol: rolEspacio,
     miembro: Boolean(rolEspacio),
     esDueno: rolEspacio === 'owner',
+    esCliente: rolEspacio === 'cliente',
     gestionarEspacio: rolEspacio === 'owner',
     gestionarMiembros: rolEspacio === 'owner',
     crearProyecto: mando,
@@ -96,5 +103,65 @@ export function permisos(rolEspacio) {
     // Cualquier miembro puede pedir; solo quien manda agenda y cierra.
     crearSolicitud: Boolean(rolEspacio),
     gestionarTareas: mando,
+    gestionarEntregas: mando,
+    // El dinero no lo ve ni un invitado ni un cliente.
+    verDinero: mando,
   }
 }
+
+// ---------- Entregas ----------
+
+export const ESTADOS_ENTREGA = [
+  { id: 'planeada', nombre: 'Planeada', color: '#6b7280' },
+  { id: 'en_progreso', nombre: 'En progreso', color: '#2563eb' },
+  { id: 'entregada', nombre: 'Entregada', color: '#0891b2' },
+  { id: 'aprobada', nombre: 'Aprobada', color: '#16a34a' },
+  { id: 'cancelada', nombre: 'Cancelada', color: '#9ca3af' },
+]
+
+export const ENTREGAS_ABIERTAS = ['planeada', 'en_progreso']
+
+// ---------- Cobros ----------
+
+export const CADENCIAS = [
+  { id: 'mensual', nombre: 'Mensual', meses: 1 },
+  { id: 'bimestral', nombre: 'Bimestral', meses: 2 },
+  { id: 'trimestral', nombre: 'Trimestral', meses: 3 },
+  { id: 'semestral', nombre: 'Semestral', meses: 6 },
+  { id: 'anual', nombre: 'Anual', meses: 12 },
+]
+
+export const ESTADOS_SUSCRIPCION = [
+  { id: 'activa', nombre: 'Activa', color: '#16a34a' },
+  { id: 'pausada', nombre: 'Pausada', color: '#d97706' },
+  { id: 'cancelada', nombre: 'Cancelada', color: '#9ca3af' },
+]
+
+export const ESTADOS_COBRO = [
+  { id: 'pendiente', nombre: 'Pendiente', color: '#6b7280' },
+  { id: 'pagado', nombre: 'Pagado', color: '#16a34a' },
+  { id: 'vencido', nombre: 'Vencido', color: '#dc2626' },
+  { id: 'cancelado', nombre: 'Cancelado', color: '#9ca3af' },
+]
+
+export const estadoEntrega = porIdEntrega(ESTADOS_ENTREGA)
+export const cadencia = porIdEntrega(CADENCIAS)
+export const estadoSuscripcion = porIdEntrega(ESTADOS_SUSCRIPCION)
+export const estadoCobro = porIdEntrega(ESTADOS_COBRO)
+
+function porIdEntrega(catalogo) {
+  return (id) =>
+    catalogo.find((item) => item.id === id) || { id, nombre: id ?? '—', color: '#6b7280' }
+}
+
+// Lo que factura una suscripción al año, para poder compararlas entre sí
+// aunque unas cobren cada mes y otras cada año.
+export function anualizado(sub) {
+  const meses = CADENCIAS.find((c) => c.id === sub.cadence)?.meses ?? 1
+  return (Number(sub.amount) || 0) * (12 / meses)
+}
+
+export const dinero = (monto, moneda = 'MXN') =>
+  new Intl.NumberFormat('es-MX', {
+    style: 'currency', currency: moneda, maximumFractionDigits: 0,
+  }).format(Number(monto) || 0)

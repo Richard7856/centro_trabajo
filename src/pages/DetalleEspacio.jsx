@@ -14,10 +14,15 @@ export default function DetalleEspacio() {
   const {
     espacios, todosLosProyectos, todasLasTareas, personas, miembrosDe, permisosEn,
     guardarEspacio, eliminarEspacio, guardarMiembro, quitarMiembro, setEspacioId, nombreDe,
+    agregarMiembro,
   } = useDatos()
 
   const [editando, setEditando] = useState(false)
   const [error, setError] = useState('')
+  const [correo, setCorreo] = useState('')
+  const [rolNuevo, setRolNuevo] = useState('socio')
+  const [aviso, setAviso] = useState('')
+  const [sumando, setSumando] = useState(false)
 
   // Si no está en la lista, la base no lo entregó: para esta cuenta no existe.
   const espacio = espacios.find((e) => e.id === id)
@@ -128,11 +133,58 @@ export default function DetalleEspacio() {
         ))}
 
         {p.gestionarMiembros && (
-          <p className="mini suave" style={{ marginTop: 12, marginBottom: 0 }}>
-            Para sumar a alguien nuevo hace falta que primero cree su cuenta. El envío
-            de invitaciones por correo está en la tabla <code>invitations</code> pero
-            todavía no conectado a la pantalla.
-          </p>
+          <>
+            <form
+              className="filtros"
+              style={{ marginTop: 14, marginBottom: 0 }}
+              onSubmit={async (ev) => {
+                ev.preventDefault()
+                if (!correo.trim()) return
+                setSumando(true)
+                setAviso('')
+                setError('')
+                try {
+                  const r = await agregarMiembro(espacio.id, correo, rolNuevo)
+                  if (r?.estado === 'sin_cuenta') {
+                    setAviso(
+                      `No hay ninguna cuenta con ${r.email}. Pídele que entre a la aplicación y cree su cuenta con ese correo; después vuelve a intentarlo.`,
+                    )
+                  } else {
+                    setAviso(`${r.nombre} quedó agregado como ${rolPorId(rolNuevo).nombre.toLowerCase()}.`)
+                    setCorreo('')
+                  }
+                } catch (e) {
+                  setError(e.message)
+                } finally {
+                  setSumando(false)
+                }
+              }}
+            >
+              <input
+                type="email"
+                style={{ flex: 1, minWidth: 220 }}
+                placeholder="Correo de la persona…"
+                value={correo}
+                onChange={(e) => setCorreo(e.target.value)}
+              />
+              <select value={rolNuevo} onChange={(e) => setRolNuevo(e.target.value)}>
+                {ROLES.filter((r) => r.id !== 'owner').map((r) => (
+                  <option key={r.id} value={r.id}>{r.nombre}</option>
+                ))}
+              </select>
+              <button className="boton primario" type="submit" disabled={sumando}>
+                {sumando ? 'Agregando…' : 'Agregar'}
+              </button>
+            </form>
+
+            {aviso && <p className="mini suave" style={{ marginBottom: 0 }}>{aviso}</p>}
+
+            <p className="mini suave" style={{ marginBottom: 0 }}>
+              La persona tiene que haber creado su cuenta antes. Un <strong>cliente</strong>{' '}
+              además no ve nada hasta que se le da acceso a un proyecto concreto,
+              desde la ficha de ese proyecto.
+            </p>
+          </>
         )}
       </section>
 
