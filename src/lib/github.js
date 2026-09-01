@@ -74,3 +74,11 @@ export function fechaRelativa(iso) {
   if (dias < 365) return `hace ${Math.floor(dias / 30)} meses`
   return `hace ${Math.floor(dias / 365)} años`
 }
+
+// La base guarda el repositorio como URL completa; aquí se parte en piezas.
+export function partirRepo(url, rama = 'main') {
+  if (!url) return null
+  const m = String(url).match(/github\.com\/([^/\s]+)\/([^/\s#?]+)/i)
+  if (!m) return null
+  return { propietario: m[1], nombre: m[2].replace(/\.git$/i, ''), rama }
+}

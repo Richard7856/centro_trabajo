@@ -1,44 +1,20 @@
-import { useRef, useState } from 'react'
-import { useAlmacen } from '../lib/almacen.jsx'
+import { useState } from 'react'
+import { useDatos } from '../lib/datos.jsx'
+import { useSesion } from '../lib/sesion.jsx'
+import { supabase } from '../lib/supabase.js'
 
 export default function Ajustes() {
-  const almacen = useAlmacen()
-  const {
-    colaboradores, espacios, miembros, proyectos, tareas,
-    tokenGithub, setTokenGithub, usuario, misEspacios, permisosEn,
-  } = almacen
+  const { espacios, todosLosProyectos, todasLasTareas, personas, recargar } = useDatos()
+  const { perfil, correo, salir } = useSesion()
+  const [nombre, setNombre] = useState(perfil?.full_name ?? '')
+  const [aviso, setAviso] = useState(null)
 
-  const archivo = useRef(null)
-  const [mensaje, setMensaje] = useState(null)
-  const [token, setToken] = useState(tokenGithub)
-
-  const esDueno = misEspacios.some((e) => permisosEn(e.id).esDueno)
+  const url = import.meta.env.VITE_SUPABASE_URL ?? ''
+  const proyectoSupabase = url.replace('https://', '').split('.')[0]
 
   function avisar(texto, error = false) {
-    setMensaje({ texto, error })
-    setTimeout(() => setMensaje(null), 4000)
-  }
-
-  function descargar() {
-    const blob = new Blob([almacen.exportar()], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `centro-trabajo-${new Date().toISOString().slice(0, 10)}.json`
-    a.click()
-    URL.revokeObjectURL(url)
-  }
-
-  async function cargar(e) {
-    const f = e.target.files?.[0]
-    if (!f) return
-    try {
-      almacen.importar(await f.text())
-      avisar('Datos importados correctamente.')
-    } catch (err) {
-      avisar(`No se pudo importar: ${err.message}`, true)
-    }
-    e.target.value = ''
+    setAviso({ texto, error })
+    setTimeout(() => setAviso(null), 4000)
   }
 
   return (
@@ -46,133 +22,76 @@ export default function Ajustes() {
       <div className="encabezado">
         <div>
           <h1>Ajustes</h1>
-          <p>Sesión actual: {usuario?.nombre ?? '—'}</p>
+          <p>{correo}</p>
         </div>
+        <button className="boton" onClick={salir}>Cerrar sesión</button>
       </div>
 
-      {mensaje && (
-        <div
-          className="aviso"
-          style={mensaje.error ? { color: 'var(--peligro)', borderColor: 'var(--peligro)', background: 'transparent' } : undefined}
-        >
-          {mensaje.texto}
-        </div>
+      {aviso && (
+        <div className={`aviso${aviso.error ? ' alerta' : ''}`}>{aviso.texto}</div>
       )}
-
-      <div className="aviso alerta">
-        Los datos viven en este navegador y el aislamiento entre espacios es solo de
-        pantalla. Antes de compartir el acceso con alguien, hay que moverlos al
-        servidor con inicio de sesión.
-      </div>
 
       <div className="rejilla dos">
         <section className="tarjeta">
-          <h2 style={{ marginBottom: 10 }}>Contenido</h2>
+          <h2 style={{ marginBottom: 10 }}>Tu perfil</h2>
+          <div className="campo">
+            <label>Nombre</label>
+            <input value={nombre} onChange={(e) => setNombre(e.target.value)} />
+          </div>
+          <button
+            className="boton primario"
+            onClick={async () => {
+              const { error } = await supabase
+                .from('profiles')
+                .update({ full_name: nombre.trim() })
+                .eq('id', perfil.id)
+              if (error) return avisar(error.message, true)
+              await recargar()
+              avisar('Nombre actualizado.')
+            }}
+          >
+            Guardar
+          </button>
+        </section>
+
+        <section className="tarjeta">
+          <h2 style={{ marginBottom: 10 }}>Lo que alcanzas</h2>
           <table className="tabla">
             <tbody>
               <tr><td className="suave">Espacios</td><td>{espacios.length}</td></tr>
-              <tr><td className="suave">Personas</td><td>{colaboradores.length}</td></tr>
-              <tr><td className="suave">Membresías</td><td>{miembros.length}</td></tr>
-              <tr><td className="suave">Proyectos</td><td>{proyectos.length}</td></tr>
-              <tr><td className="suave">Tareas</td><td>{tareas.length}</td></tr>
+              <tr><td className="suave">Proyectos</td><td>{todosLosProyectos.length}</td></tr>
+              <tr><td className="suave">Tareas</td><td>{todasLasTareas.length}</td></tr>
+              <tr><td className="suave">Personas visibles</td><td>{personas.length}</td></tr>
             </tbody>
           </table>
+          <p className="mini suave" style={{ marginBottom: 0 }}>
+            Estos números son lo que la base te entrega a ti. Otra cuenta vería otros.
+          </p>
         </section>
 
         <section className="tarjeta">
-          <h2 style={{ marginBottom: 10 }}>Acceso a GitHub</h2>
-          <p className="mini suave">
-            Para leer los commits de un repositorio privado. El token se guarda solo en
-            este equipo y nunca se incluye en los respaldos ni viaja con los proyectos.
-            Basta un token de solo lectura sobre los repos que quieras mostrar.
+          <h2 style={{ marginBottom: 10 }}>Dónde viven los datos</h2>
+          <table className="tabla">
+            <tbody>
+              <tr><td className="suave">Proyecto Supabase</td><td>{proyectoSupabase || '—'}</td></tr>
+              <tr><td className="suave">Aislamiento</td><td>Políticas por fila (RLS)</td></tr>
+            </tbody>
+          </table>
+          <p className="mini suave" style={{ marginBottom: 0 }}>
+            Ya no se guarda nada en este navegador: todo está en la base y cada
+            consulta se filtra por quién eres.
           </p>
-          <div className="campo">
-            <label>Token personal de GitHub</label>
-            <input
-              type="password"
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-              placeholder={tokenGithub ? '•••••••• (guardado)' : 'github_pat_…'}
-              autoComplete="off"
-            />
-          </div>
-          <div className="acciones">
-            <button
-              className="boton primario"
-              onClick={() => {
-                setTokenGithub(token.trim())
-                avisar(token.trim() ? 'Token guardado en este equipo.' : 'Token eliminado.')
-              }}
-            >
-              Guardar token
-            </button>
-            {tokenGithub && (
-              <button
-                className="boton"
-                onClick={() => {
-                  setToken('')
-                  setTokenGithub('')
-                  avisar('Token eliminado de este equipo.')
-                }}
-              >
-                Quitar
-              </button>
-            )}
-          </div>
         </section>
 
         <section className="tarjeta">
-          <h2 style={{ marginBottom: 10 }}>Respaldo</h2>
-          <p className="mini suave">
-            Exporta un archivo JSON con espacios, personas, proyectos y tareas para
-            respaldarlos o pasarlos a otro equipo.
+          <h2 style={{ marginBottom: 10 }}>Commits privados</h2>
+          <p className="mini suave" style={{ marginBottom: 0 }}>
+            Los commits de un repositorio público se leen sin más. Para uno privado
+            hace falta un token, y ponerlo en el navegador lo dejaría a la vista de
+            quien abra la sesión: se resuelve moviendo esa llamada al servidor, que
+            es el siguiente paso pendiente.
           </p>
-          <div className="acciones">
-            <button className="boton" onClick={descargar}>Exportar JSON</button>
-            <button className="boton" onClick={() => archivo.current?.click()}>Importar JSON</button>
-            <input
-              ref={archivo}
-              type="file"
-              accept="application/json,.json"
-              onChange={cargar}
-              style={{ display: 'none' }}
-            />
-          </div>
         </section>
-
-        {esDueno && (
-          <section className="tarjeta">
-            <h2 style={{ marginBottom: 10 }}>Reiniciar</h2>
-            <p className="mini suave">
-              «Borrar todo» deja la aplicación vacía. «Restaurar estructura» vuelve a los
-              cuatro espacios iniciales sin proyectos.
-            </p>
-            <div className="acciones">
-              <button
-                className="boton peligro"
-                onClick={() => {
-                  if (confirm('¿Borrar todo el contenido? No se puede deshacer.')) {
-                    almacen.vaciar()
-                    avisar('Contenido borrado.')
-                  }
-                }}
-              >
-                Borrar todo
-              </button>
-              <button
-                className="boton"
-                onClick={() => {
-                  if (confirm('¿Volver a los espacios iniciales? Se pierde lo capturado.')) {
-                    almacen.restaurarEstructura()
-                    avisar('Estructura restaurada.')
-                  }
-                }}
-              >
-                Restaurar estructura
-              </button>
-            </div>
-          </section>
-        )}
       </div>
     </>
   )

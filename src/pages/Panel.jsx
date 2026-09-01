@@ -1,9 +1,10 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useAlmacen } from '../lib/almacen.jsx'
-import { ESTADOS_PROYECTO, estadoProyecto, rol as rolPorId } from '../data/modelo.js'
-import { avanceProyecto, resumen, vencimientos } from '../lib/calculos.js'
+import { useDatos } from '../lib/datos.jsx'
+import { ESTADOS_PROYECTO, color, estadoProyecto, rol as rolPorId } from '../data/modelo.js'
+import { avance, resumen, vencimientos } from '../lib/calculos.js'
 import { formatearFecha } from '../lib/formato.js'
-import { Barra, Etiqueta, Vacio } from '../components/Piezas.jsx'
+import { Barra, Etiqueta } from '../components/Piezas.jsx'
 
 function Kpi({ etiqueta, valor }) {
   return (
@@ -14,19 +15,63 @@ function Kpi({ etiqueta, valor }) {
   )
 }
 
+// Primera vez: la cuenta existe pero todavía no tiene espacios.
+function Arranque() {
+  const { sembrar } = useDatos()
+  const [ocupado, setOcupado] = useState(false)
+  const [error, setError] = useState('')
+
+  return (
+    <div className="tarjeta vacio">
+      <h3>Tu cuenta todavía no tiene espacios</h3>
+      <p>
+        Puedo crear los cinco espacios acordados —Jose, Jaime, Yimi, Personal y
+        Access archivado— con los dos proyectos y sus 23 tareas.
+      </p>
+      {error && <p className="mini vencida">{error}</p>}
+      <button
+        className="boton primario"
+        disabled={ocupado}
+        onClick={async () => {
+          setOcupado(true)
+          setError('')
+          try {
+            await sembrar()
+          } catch (e) {
+            setError(e.message)
+          } finally {
+            setOcupado(false)
+          }
+        }}
+      >
+        {ocupado ? 'Creando…' : 'Crear mis espacios'}
+      </button>
+    </div>
+  )
+}
+
 export default function Panel() {
   const {
-    usuario, misEspacios, misProyectos, misTareas, espacioId, espacioActivo,
-    permisosEn, setEspacioId,
-  } = useAlmacen()
+    espacios, proyectos, tareas, espacioId, espacioActivo,
+    permisosEn, setEspacioId, cargando,
+  } = useDatos()
 
-  const r = resumen(misProyectos, misTareas)
-  const proximos = vencimientos(misProyectos, misTareas).slice(0, 8)
-  const solicitudes = misTareas.filter((t) => t.esSolicitud && t.estado !== 'completada')
+  if (!cargando && espacios.length === 0) {
+    return (
+      <>
+        <div className="encabezado"><div><h1>Panel</h1></div></div>
+        <Arranque />
+      </>
+    )
+  }
 
-  const activos = [...misProyectos]
-    .filter((p) => p.estado === 'en_progreso' || p.estado === 'planeado')
-    .sort((a, b) => (a.fechaFin || '9999').localeCompare(b.fechaFin || '9999'))
+  const r = resumen(proyectos, tareas)
+  const proximos = vencimientos(proyectos, tareas).slice(0, 8)
+  const solicitudes = tareas.filter((t) => t.status === 'inbox')
+
+  const activos = [...proyectos]
+    .filter((p) => p.status === 'activo')
+    .sort((a, b) => (a.due_date || '9999').localeCompare(b.due_date || '9999'))
     .slice(0, 5)
 
   return (
@@ -34,10 +79,7 @@ export default function Panel() {
       <div className="encabezado">
         <div>
           <h1>Panel</h1>
-          <p>
-            {usuario ? `${usuario.nombre} · ` : ''}
-            {espacioActivo ? `Espacio: ${espacioActivo.nombre}` : `${misEspacios.length} espacio(s)`}
-          </p>
+          <p>{espacioActivo ? `Espacio: ${espacioActivo.name}` : `${espacios.length} espacio(s)`}</p>
         </div>
         <div className="acciones">
           <Link className="boton" to="/espacios">Espacios</Link>
@@ -45,31 +87,20 @@ export default function Panel() {
         </div>
       </div>
 
-      {misProyectos.length === 0 && (
-        <div className="aviso">
-          <span>
-            Los espacios ya están creados. El siguiente paso es dar de alta los proyectos
-            y asignarlos a cada uno.
-          </span>
-          <Link className="boton sm" to="/proyectos">Crear proyecto</Link>
-        </div>
-      )}
-
       <div className="rejilla kpi" style={{ marginBottom: 18 }}>
         <Kpi etiqueta="Proyectos activos" valor={r.activos} />
-        <Kpi etiqueta="En progreso" valor={r.enProgreso} />
         <Kpi etiqueta="Completados" valor={r.completados} />
-        <Kpi etiqueta="Tareas abiertas" valor={r.tareasAbiertas} />
-        <Kpi etiqueta="Solicitudes" valor={solicitudes.length} />
+        <Kpi etiqueta="Tareas abiertas" valor={r.abiertas} />
+        <Kpi etiqueta="Solicitudes" valor={r.solicitudes} />
+        <Kpi etiqueta="Espacios" valor={espacios.length} />
       </div>
 
-      {!espacioId && misEspacios.length > 0 && (
+      {!espacioId && (
         <section className="tarjeta" style={{ marginBottom: 14 }}>
           <h2 style={{ marginBottom: 12 }}>Mis espacios</h2>
           <div className="rejilla cards">
-            {misEspacios.map((e) => {
-              const suyos = misProyectos.filter((p) => p.espacioId === e.id)
-              const activosEsp = suyos.filter((p) => p.estado === 'en_progreso').length
+            {espacios.map((e) => {
+              const suyos = proyectos.filter((p) => p.space_id === e.id)
               return (
                 <Link
                   key={e.id}
@@ -79,13 +110,14 @@ export default function Panel() {
                 >
                   <div className="entre" style={{ marginBottom: 6 }}>
                     <span className="linea">
-                      <span className="punto-espacio" style={{ background: e.color }} />
-                      <strong>{e.nombre}</strong>
+                      <span className="punto-espacio" style={{ background: color(e.color) }} />
+                      <strong>{e.name}</strong>
                     </span>
                     <Etiqueta item={rolPorId(permisosEn(e.id).rol)} />
                   </div>
                   <span className="mini suave">
-                    {suyos.length} proyecto(s) · {activosEsp} en progreso
+                    {suyos.length} proyecto(s)
+                    {e.archived_at && ' · archivado'}
                   </span>
                 </Link>
               )
@@ -97,15 +129,14 @@ export default function Panel() {
       <div className="rejilla dos">
         <section className="tarjeta">
           <div className="entre" style={{ marginBottom: 12 }}>
-            <h2>Proyectos en curso</h2>
+            <h2>Proyectos activos</h2>
             <Link className="mini suave" to="/proyectos">Ver todos →</Link>
           </div>
-
           {activos.length === 0 ? (
-            <p className="suave mini">No hay proyectos planeados ni en progreso.</p>
+            <p className="suave mini">No hay proyectos activos.</p>
           ) : (
             activos.map((p) => {
-              const avance = avanceProyecto(p, misTareas)
+              const pct = avance(p, tareas)
               return (
                 <Link
                   key={p.id}
@@ -113,14 +144,14 @@ export default function Panel() {
                   style={{ display: 'block', padding: '10px 0', borderBottom: '1px solid var(--borde)' }}
                 >
                   <div className="entre">
-                    <strong>{p.nombre}</strong>
-                    <Etiqueta item={estadoProyecto(p.estado)} />
+                    <strong>{p.name}</strong>
+                    <Etiqueta item={estadoProyecto(p.status)} />
                   </div>
                   <div className="entre mini suave" style={{ margin: '6px 0' }}>
-                    <span>Entrega: {formatearFecha(p.fechaFin)}</span>
-                    <span>{avance}%</span>
+                    <span>Entrega: {formatearFecha(p.due_date)}</span>
+                    <span>{pct}%</span>
                   </div>
-                  <Barra valor={avance} />
+                  <Barra valor={pct} />
                 </Link>
               )
             })
@@ -139,9 +170,7 @@ export default function Panel() {
                 style={{ padding: '7px 0', borderBottom: '1px solid var(--borde)' }}
               >
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {v.titulo}
-                  </div>
+                  <div className="recorte">{v.titulo}</div>
                   <span className="mini suave">
                     {v.tipo === 'proyecto' ? 'Proyecto' : 'Tarea'} · {formatearFecha(v.fecha)}
                   </span>
@@ -156,21 +185,19 @@ export default function Panel() {
 
         <section className="tarjeta">
           <h2 style={{ marginBottom: 12 }}>Proyectos por estado</h2>
-          {misProyectos.length === 0 ? (
-            <p className="suave mini">Sin proyectos registrados.</p>
+          {proyectos.length === 0 ? (
+            <p className="suave mini">Sin proyectos.</p>
           ) : (
             ESTADOS_PROYECTO.map((e) => {
-              const n = misProyectos.filter((p) => p.estado === e.id).length
-              const pct = Math.round((n / misProyectos.length) * 100)
+              const n = proyectos.filter((p) => p.status === e.id).length
+              const pct = Math.round((n / proyectos.length) * 100)
               return (
                 <div key={e.id} style={{ marginBottom: 10 }}>
                   <div className="entre mini">
                     <span>{e.nombre}</span>
                     <span className="suave">{n}</span>
                   </div>
-                  <div className="barra">
-                    <div style={{ width: `${pct}%`, background: e.color }} />
-                  </div>
+                  <div className="barra"><div style={{ width: `${pct}%`, background: e.color }} /></div>
                 </div>
               )
             })
@@ -178,34 +205,27 @@ export default function Panel() {
         </section>
 
         <section className="tarjeta">
-          <h2 style={{ marginBottom: 12 }}>Solicitudes de clientes</h2>
+          <div className="entre" style={{ marginBottom: 12 }}>
+            <h2>Solicitudes sin revisar</h2>
+            <Link className="mini suave" to="/bandeja">Ver bandeja →</Link>
+          </div>
           {solicitudes.length === 0 ? (
-            <p className="suave mini">Sin solicitudes abiertas.</p>
+            <p className="suave mini">Nada pendiente de revisar.</p>
           ) : (
-            solicitudes.slice(0, 8).map((t) => {
-              const p = misProyectos.find((x) => x.id === t.proyectoId)
-              return (
-                <Link
-                  key={t.id}
-                  to={`/proyectos/${t.proyectoId}`}
-                  className="entre"
-                  style={{ padding: '8px 0', borderBottom: '1px solid var(--borde)' }}
-                >
-                  <span style={{ minWidth: 0 }}>
-                    <div>{t.titulo}</div>
-                    <span className="mini suave">{p?.nombre ?? 'Proyecto'}</span>
-                  </span>
-                  <span className="chip">Solicitud</span>
-                </Link>
-              )
-            })
+            solicitudes.slice(0, 6).map((t) => (
+              <Link
+                key={t.id}
+                to="/bandeja"
+                className="entre"
+                style={{ padding: '8px 0', borderBottom: '1px solid var(--borde)' }}
+              >
+                <span className="recorte">{t.title}</span>
+                <span className="chip">{t.origin === 'vigilante' ? 'Vigilante' : 'Solicitud'}</span>
+              </Link>
+            ))
           )}
         </section>
       </div>
-
-      {misEspacios.length === 0 && (
-        <Vacio titulo="Sin espacios" texto="No perteneces a ningún espacio todavía." />
-      )}
     </>
   )
 }

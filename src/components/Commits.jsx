@@ -1,37 +1,38 @@
 import { useCallback, useEffect, useState } from 'react'
-import { repoTexto, repoValido } from '../data/modelo.js'
 import { fechaRelativa, traerCommits } from '../lib/github.js'
-import { useAlmacen } from '../lib/almacen.jsx'
 
-// Últimos commits del repositorio del proyecto: es la vista de "qué se ha hecho"
-// que ven el socio y el cliente sin tener que entrar a GitHub.
+// Últimos commits del repositorio del proyecto: la vista de "qué se ha hecho"
+// sin salir de la aplicación.
+//
+// La llamada sale del navegador sin credenciales, así que funciona con
+// repositorios públicos. Para uno privado hace falta un token, y un token en el
+// navegador queda a la vista: eso se resuelve moviendo la llamada al servidor.
 export default function Commits({ repo }) {
-  const { tokenGithub } = useAlmacen()
   const [commits, setCommits] = useState([])
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState('')
 
   const cargar = useCallback(async () => {
-    if (!repoValido(repo)) return
+    if (!repo) return
     setCargando(true)
     setError('')
     try {
-      setCommits(await traerCommits(repo, tokenGithub))
+      setCommits(await traerCommits(repo, '', 10))
     } catch (e) {
       setError(e.message)
       setCommits([])
     } finally {
       setCargando(false)
     }
-  }, [repo?.propietario, repo?.nombre, repo?.rama, tokenGithub])
+  }, [repo?.propietario, repo?.nombre, repo?.rama])
 
   useEffect(() => { cargar() }, [cargar])
 
-  if (!repoValido(repo)) {
+  if (!repo) {
     return (
       <p className="suave mini" style={{ marginBottom: 0 }}>
-        Este proyecto todavía no está vinculado a un repositorio. Edítalo para
-        agregar el propietario y el nombre del repo.
+        Este proyecto no está vinculado a un repositorio. Edítalo y agrega la
+        dirección de GitHub para ver aquí los commits.
       </p>
     )
   }
@@ -40,17 +41,17 @@ export default function Commits({ repo }) {
     <>
       <div className="entre" style={{ marginBottom: 10 }}>
         <span className="linea mini suave">
-          <span className="chip">{repoTexto(repo)}</span>
-          <span>rama {repo.rama || 'main'}</span>
+          <span className="chip">{repo.propietario}/{repo.nombre}</span>
+          <span>rama {repo.rama}</span>
         </span>
         <span className="linea">
           <a
             className="boton sm"
-            href={`https://github.com/${repo.propietario}/${repo.nombre}/commits/${repo.rama || 'main'}`}
+            href={`https://github.com/${repo.propietario}/${repo.nombre}/commits/${repo.rama}`}
             target="_blank"
             rel="noreferrer"
           >
-            Abrir en GitHub ↗
+            GitHub ↗
           </a>
           <button className="boton sm" onClick={cargar} disabled={cargando}>
             {cargando ? 'Cargando…' : 'Actualizar'}
@@ -66,20 +67,13 @@ export default function Commits({ repo }) {
 
       {commits.map((c) => (
         <div key={c.sha} className="commit">
-          <a
-            className="sha"
-            href={c.url}
-            target="_blank"
-            rel="noreferrer"
-            title="Ver el commit en GitHub"
-          >
+          <a className="sha" href={c.url} target="_blank" rel="noreferrer" title="Ver en GitHub">
             {c.shaCorto}
           </a>
           <div className="cuerpo">
             <div className="titulo-commit">{c.titulo}</div>
             <span className="mini suave">
-              {c.autor}
-              {c.fecha && ` · ${fechaRelativa(c.fecha)}`}
+              {c.autor}{c.fecha && ` · ${fechaRelativa(c.fecha)}`}
             </span>
           </div>
         </div>

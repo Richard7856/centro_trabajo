@@ -268,3 +268,33 @@ h3 { font-size: 15px; }
   .sesion p { display: none; }
   .selector-espacio { min-width: 190px; }
 }
+
+/* ---------- Acceso ---------- */
+
+.portada {
+  min-height: 100vh; display: grid; place-items: center;
+  padding: 24px; background: var(--fondo);
+}
+.acceso { width: min(400px, 100%); }
+.acceso h1 { letter-spacing: -0.3px; }
+
+.enlace {
+  background: none; border: none; padding: 0; cursor: pointer;
+  color: var(--acento); font-family: inherit; font-size: 12px; font-weight: 600;
+}
+.enlace:hover { text-decoration: underline; }
+
+.recorte { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.mini-select {
+  padding: 4px 8px; border-radius: 6px; border: 1px solid var(--borde);
+  background: var(--superficie); color: var(--texto); font-size: 12px;
+  font-family: inherit;
+}
+
+code {
+  background: var(--superficie-2); padding: 1px 5px; border-radius: 4px;
+  font-size: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.sesion .avatar { border: none; }

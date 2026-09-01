@@ -1,77 +1,99 @@
 # Centro de Trabajo
 
 Organizador de proyectos con espacios aislados, roles y seguimiento de commits.
-React + Vite.
+React + Vite sobre Supabase.
 
 ## Idea
 
 Cada **espacio** es un compartimento estanco. Quien pertenece a uno no ve los
 demás ni sabe que existen: ni sus proyectos, ni sus tareas, ni sus miembros.
 
-Espacios iniciales:
-
-| Espacio | Tipo | Miembros |
-|---|---|---|
-| Jose & Richard | sociedad | Richard (dueño), Jose (socio) |
-| Jaime & Richard | sociedad | Richard (dueño), Jaime (socio) |
-| Yimi & Richard | sociedad | Richard (dueño), Yimi (socio) |
-| Proyectos personales | personal | Richard (dueño) |
+Y no es la pantalla la que lo esconde. La política de la base dice
+`spaces_select = is_space_member(id)`, así que a quien no es miembro la base
+sencillamente **no le entrega la fila**. Comprobado: una sesión anónima recibe
+cero en todas las tablas, y un socio del espacio «Jose» recibe un solo espacio.
 
 ## Roles
 
-| Rol | Alcance | Crea proyectos | Levanta tareas | Cierra tareas | Miembros |
+| Rol | Alcance | Proyectos | Pedir | Agendar y cerrar | Miembros |
 |---|---|---|---|---|---|
 | Dueño | Todo el espacio | sí | sí | sí | sí |
 | Socio | Todo el espacio | sí | sí | sí | no |
-| Colaborador | Solo sus proyectos | no | sí | sí | no |
-| Cliente | Solo los proyectos donde se le da acceso | no | sí (solicitudes) | no | no |
+| Invitado | Consulta el espacio | no | sí | no | no |
 
-Un cliente no ve los demás proyectos del espacio, aunque pertenezca a él.
+Un invitado puede levantar solicitudes (`inbox`, sin fecha) y nada más: lo
+impide la política `tasks_insert`, no el botón.
 
-## Estado del aislamiento — importante
-
-Hoy la aplicación vive en el navegador y **el aislamiento es de pantalla, no de
-seguridad**. Sirve para diseñar y probar las reglas, no para repartir accesos:
-quien abra las herramientas de desarrollo ve todos los datos cargados.
-
-Las reglas de `src/lib/permisos.js` están escritas para traducirse a políticas de
-base de datos por fila. Hasta que eso esté, no se comparte el acceso con nadie.
-
-## GitHub
-
-Cada proyecto puede apuntar a un repositorio (propietario, nombre y rama) y su
-ficha muestra los últimos commits: quién, qué y cuándo, con enlace a GitHub.
-
-Un repositorio público no necesita nada. Para uno privado hace falta un token de
-solo lectura, que se guarda **solo en el equipo de quien lo escribe**
-(Ajustes → Acceso a GitHub) y nunca se incluye en los respaldos.
-
-## Cómo correrlo
+## Correr en local
 
 ```bash
 npm install
-npm run dev      # http://localhost:5173
-npm run build
-npm run preview
+cp .env.example .env
+npm run dev
 ```
 
-En la barra lateral, **Ver como** cambia de identidad para comprobar qué alcanza
-cada rol. Es un apoyo de desarrollo; lo sustituye el inicio de sesión real.
+Las dos variables de `.env.example` son públicas por diseño: viajan al
+navegador, y lo que protege los datos son las políticas por fila.
+
+## Desplegar en Vercel
+
+En **Settings → Environment Variables** hay que definir, para Production,
+Preview y Development:
+
+| Variable | Valor |
+|---|---|
+| `VITE_SUPABASE_URL` | `https://duzfvyfhsvhavptuxehi.supabase.co` |
+| `VITE_SUPABASE_ANON_KEY` | la clave publicable del proyecto |
+
+Vite las incrusta **al construir**, no al arrancar: después de agregarlas hay
+que volver a desplegar. Si faltan, la aplicación lo dice en la pantalla de
+acceso en vez de fallar en cada consulta.
+
+## Primer arranque
+
+1. Crear la cuenta desde la pantalla de acceso. Un disparador crea el perfil.
+2. El panel ofrece el botón **Crear mis espacios**, que llama una sola vez a
+   `sembrar_organizador()`: deja los cinco espacios —Jose, Jaime, Yimi, Personal
+   y Access archivado—, los dos proyectos y sus 23 tareas.
+
+## GitHub
+
+Cada proyecto guarda su `repo_url` y la ficha lista los últimos commits: quién,
+qué y cuándo, con enlace a GitHub. Funciona con repositorios públicos, porque la
+llamada sale del navegador sin credenciales.
+
+Para un repositorio **privado** hace falta un token, y un token en el navegador
+queda a la vista de quien abra esa sesión. Se resuelve moviendo la llamada a una
+función del servidor; está pendiente.
+
+## Qué falta
+
+- **Rol de cliente.** El enum es `owner | socio | invitado` y un invitado
+  alcanza todos los proyectos del espacio. Para que un cliente vea solo el suyo
+  hacen falta el rol nuevo, una tabla de acceso por proyecto y ajustar
+  `projects_select` y `tasks_select`.
+- **Invitaciones por correo.** La tabla `invitations` existe y tiene políticas,
+  pero no está conectada a la pantalla: hoy alguien se suma creando su cuenta y
+  agregándolo el dueño desde la ficha del espacio.
+- **Commits de repositorios privados**, según lo anterior.
+- **Asignar responsables** a proyectos y tareas: el esquema todavía no guarda a
+  quién le toca cada cosa.
 
 ## Estructura
 
 ```
 src/
-├── App.jsx                  Layout, selector de espacio e identidad, rutas
-├── data/
-│   ├── modelo.js            Catálogos: estados, prioridades, roles, tipos
-│   └── semilla.js           Espacios y personas iniciales
+├── App.jsx              Portón de sesión, menú y rutas
 ├── lib/
-│   ├── almacen.jsx          Estado global, persistencia y alcance del usuario
-│   ├── permisos.js          Qué ve y qué puede hacer cada rol
-│   ├── calculos.js          Avance, carga de trabajo y vencimientos
-│   ├── github.js            Lectura de commits
-│   └── formato.js           Fechas, iniciales y colores
-├── components/              Piezas, formularios y panel de commits
-└── pages/                   Panel, Espacios, Proyectos, Personas, Ajustes
+│   ├── supabase.js      Cliente
+│   ├── sesion.jsx       Inicio de sesión y perfil
+│   ├── datos.jsx        Lectura y escritura contra la base
+│   ├── calculos.js      Avance, resumen y vencimientos
+│   ├── github.js        Lectura de commits
+│   └── formato.js       Fechas, iniciales y colores
+├── data/modelo.js       Catálogos (idénticos a los enums) y permisos
+├── components/          Piezas, formularios, lista de tareas, commits
+└── pages/               Entrar, Panel, Espacios, Proyectos, Bandeja, Ajustes
+
+supabase/migraciones/    Esquema, políticas, siembra y endurecimiento
 ```

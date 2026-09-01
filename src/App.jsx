@@ -1,31 +1,37 @@
 import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
-import { useAlmacen } from './lib/almacen.jsx'
+import { useSesion } from './lib/sesion.jsx'
+import { useDatos } from './lib/datos.jsx'
+import { color } from './data/modelo.js'
+import Entrar from './pages/Entrar.jsx'
 import Panel from './pages/Panel.jsx'
 import Espacios from './pages/Espacios.jsx'
 import DetalleEspacio from './pages/DetalleEspacio.jsx'
 import Proyectos from './pages/Proyectos.jsx'
 import DetalleProyecto from './pages/DetalleProyecto.jsx'
-import Colaboradores from './pages/Colaboradores.jsx'
-import DetalleColaborador from './pages/DetalleColaborador.jsx'
+import Bandeja from './pages/Bandeja.jsx'
 import Ajustes from './pages/Ajustes.jsx'
 
 function Enlace({ a, children, conteo }) {
   return (
     <NavLink to={a} className={({ isActive }) => (isActive ? 'activo' : '')} end={a === '/'}>
       <span>{children}</span>
-      {conteo !== undefined && <span className="conteo">{conteo}</span>}
+      {conteo !== undefined && conteo > 0 && <span className="conteo">{conteo}</span>}
     </NavLink>
   )
 }
 
 export default function App() {
-  const {
-    misEspacios, misProyectos, colaboradores,
-    usuarioId, setUsuarioId, espacioId, setEspacioId, permisosEn,
-  } = useAlmacen()
+  const { cargando: cargandoSesion, sesion, perfil, correo, salir } = useSesion()
+  const { espacios, proyectos, tareas, espacioId, setEspacioId, cargando, error } = useDatos()
 
-  // El menú de personas solo tiene sentido para quien manda en algún espacio.
-  const mandaEnAlguno = misEspacios.some((e) => permisosEn(e.id).verEquipoCompleto)
+  if (cargandoSesion) {
+    return <div className="portada"><p className="suave">Cargando…</p></div>
+  }
+
+  // Sin sesión no hay aplicación: ni siquiera se montan las rutas.
+  if (!sesion) return <Entrar />
+
+  const solicitudes = tareas.filter((t) => t.status === 'inbox').length
 
   return (
     <div className="app">
@@ -41,53 +47,61 @@ export default function App() {
         <div className="selector-espacio">
           <label className="mini suave">Espacio</label>
           <select value={espacioId} onChange={(e) => setEspacioId(e.target.value)}>
-            <option value="">Todos mis espacios ({misEspacios.length})</option>
-            {misEspacios.map((e) => (
-              <option key={e.id} value={e.id}>{e.nombre}</option>
+            <option value="">Todos mis espacios ({espacios.length})</option>
+            {espacios.map((e) => (
+              <option key={e.id} value={e.id}>
+                {e.name}{e.archived_at ? ' (archivado)' : ''}
+              </option>
             ))}
           </select>
         </div>
 
         <nav className="nav">
           <Enlace a="/">Panel</Enlace>
-          <Enlace a="/proyectos" conteo={misProyectos.length}>Proyectos</Enlace>
-          <Enlace a="/espacios" conteo={misEspacios.length}>Espacios</Enlace>
-          {mandaEnAlguno && <Enlace a="/colaboradores">Personas</Enlace>}
+          <Enlace a="/proyectos" conteo={proyectos.length}>Proyectos</Enlace>
+          <Enlace a="/bandeja" conteo={solicitudes}>Bandeja</Enlace>
+          <Enlace a="/espacios" conteo={espacios.length}>Espacios</Enlace>
           <Enlace a="/ajustes">Ajustes</Enlace>
         </nav>
 
         <div className="sesion">
-          <label className="mini suave">Ver como (pruebas)</label>
-          <select
-            value={usuarioId}
-            onChange={(e) => {
-              setUsuarioId(e.target.value)
-              setEspacioId('')
-            }}
-          >
-            {colaboradores.map((c) => (
-              <option key={c.id} value={c.id}>{c.nombre}</option>
-            ))}
-          </select>
-          <p className="mini suave" style={{ margin: '6px 0 0' }}>
-            Cambia de identidad para comprobar qué alcanza cada quien. Se reemplaza
-            por el inicio de sesión real.
-          </p>
+          <div className="linea" style={{ marginBottom: 8 }}>
+            <span
+              className="avatar sm"
+              style={{ background: color(espacios[0]?.color) }}
+              aria-hidden="true"
+            >
+              {(perfil?.full_name || correo || '?').slice(0, 1).toUpperCase()}
+            </span>
+            <span style={{ minWidth: 0 }}>
+              <div className="mini" style={{ fontWeight: 600 }}>
+                {perfil?.full_name || 'Mi cuenta'}
+              </div>
+              <div className="mini suave recorte">{correo}</div>
+            </span>
+          </div>
+          <button className="boton sm" style={{ width: '100%' }} onClick={salir}>
+            Cerrar sesión
+          </button>
         </div>
       </aside>
 
       <main className="contenido">
-        <Routes>
-          <Route path="/" element={<Panel />} />
-          <Route path="/espacios" element={<Espacios />} />
-          <Route path="/espacios/:id" element={<DetalleEspacio />} />
-          <Route path="/proyectos" element={<Proyectos />} />
-          <Route path="/proyectos/:id" element={<DetalleProyecto />} />
-          <Route path="/colaboradores" element={<Colaboradores />} />
-          <Route path="/colaboradores/:id" element={<DetalleColaborador />} />
-          <Route path="/ajustes" element={<Ajustes />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        {error && <div className="aviso alerta">{error}</div>}
+        {cargando && espacios.length === 0 && !error ? (
+          <p className="suave">Cargando tus espacios…</p>
+        ) : (
+          <Routes>
+            <Route path="/" element={<Panel />} />
+            <Route path="/espacios" element={<Espacios />} />
+            <Route path="/espacios/:id" element={<DetalleEspacio />} />
+            <Route path="/proyectos" element={<Proyectos />} />
+            <Route path="/proyectos/:id" element={<DetalleProyecto />} />
+            <Route path="/bandeja" element={<Bandeja />} />
+            <Route path="/ajustes" element={<Ajustes />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        )}
       </main>
     </div>
   )
