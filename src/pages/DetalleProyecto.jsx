@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useDatos } from '../lib/datos.jsx'
 import { PESO_PRIORIDAD, color, estadoProyecto } from '../data/modelo.js'
 import { avance, tareasDe } from '../lib/calculos.js'
-import { partirRepo } from '../lib/github.js'
+import { repoTexto } from '../lib/github.js'
 import { diasRestantes, formatearFecha } from '../lib/formato.js'
 import { Barra, Etiqueta, Modal, Vacio } from '../components/Piezas.jsx'
 import FormularioProyecto from '../components/FormularioProyecto.jsx'
@@ -44,7 +44,6 @@ export default function DetalleProyecto() {
   )
   const pct = avance(proyecto, todasLasTareas)
   const dias = diasRestantes(proyecto.due_date)
-  const repo = partirRepo(proyecto.repo_url)
 
   const intentar = async (accion) => {
     setError('')
@@ -133,7 +132,7 @@ export default function DetalleProyecto() {
                 <td className="suave">Repositorio</td>
                 <td className="mini">
                   {proyecto.repo_url
-                    ? <a href={proyecto.repo_url} target="_blank" rel="noreferrer">{proyecto.repo_url.replace('https://github.com/', '')}</a>
+                    ? <a href={proyecto.repo_url} target="_blank" rel="noreferrer">{repoTexto(proyecto.repo_url)}</a>
                     : <span className="suave">Sin vincular</span>}
                 </td>
               </tr>
@@ -157,7 +156,7 @@ export default function DetalleProyecto() {
 
         <section className="tarjeta">
           <h2 style={{ marginBottom: 12 }}>Cambios en el repositorio</h2>
-          <Commits repo={repo} />
+          <Commits proyectoId={proyecto.id} repoUrl={proyecto.repo_url} />
         </section>
       </div>
 

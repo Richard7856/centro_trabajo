@@ -4,6 +4,7 @@ import { useDatos } from '../lib/datos.jsx'
 import { ESTADOS_PROYECTO, color, estadoProyecto } from '../data/modelo.js'
 import { avance, tareasDe } from '../lib/calculos.js'
 import { formatearFecha } from '../lib/formato.js'
+import { repoTexto } from '../lib/github.js'
 import { Barra, Etiqueta, Modal, Vacio } from '../components/Piezas.jsx'
 import FormularioProyecto from '../components/FormularioProyecto.jsx'
 
@@ -109,7 +110,7 @@ export default function Proyectos() {
                     </span>
                   )}
                   {p.repo_url && (
-                    <span className="chip">⎇ {p.repo_url.replace('https://github.com/', '')}</span>
+                    <span className="chip">⎇ {repoTexto(p.repo_url)}</span>
                   )}
                 </div>
 

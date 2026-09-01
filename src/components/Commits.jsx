@@ -1,30 +1,45 @@
 import { useCallback, useEffect, useState } from 'react'
-import { fechaRelativa, traerCommits } from '../lib/github.js'
+import { supabase } from '../lib/supabase.js'
+import { fechaRelativa, partirRepo, repoTexto } from '../lib/github.js'
 
-// Últimos commits del repositorio del proyecto: la vista de "qué se ha hecho"
-// sin salir de la aplicación.
+// Últimos commits del repositorio del proyecto.
 //
-// La llamada sale del navegador sin credenciales, así que funciona con
-// repositorios públicos. Para uno privado hace falta un token, y un token en el
-// navegador queda a la vista: eso se resuelve moviendo la llamada al servidor.
-export default function Commits({ repo }) {
+// La petición va a la función `commits` del servidor, no a GitHub: allí vive el
+// token —así los repositorios privados también se ven— y allí se comprueba que
+// el proyecto le corresponda a quien pregunta.
+export default function Commits({ proyectoId, repoUrl }) {
   const [commits, setCommits] = useState([])
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState('')
 
+  const repo = partirRepo(repoUrl)
+
   const cargar = useCallback(async () => {
-    if (!repo) return
+    if (!proyectoId || !repo) return
     setCargando(true)
     setError('')
     try {
-      setCommits(await traerCommits(repo, '', 10))
+      const { data, error: err } = await supabase.functions.invoke('commits', {
+        body: { project_id: proyectoId },
+      })
+      // Un error de la función trae el detalle en el cuerpo de la respuesta.
+      if (err) {
+        const detalle = await err.context?.json?.().catch(() => null)
+        throw new Error(detalle?.error ?? err.message)
+      }
+      if (data?.error) throw new Error(data.error)
+      setCommits(data?.commits ?? [])
     } catch (e) {
-      setError(e.message)
+      setError(
+        /failed to fetch|networkerror/i.test(e.message)
+          ? 'No se pudo conectar con el servidor.'
+          : e.message,
+      )
       setCommits([])
     } finally {
       setCargando(false)
     }
-  }, [repo?.propietario, repo?.nombre, repo?.rama])
+  }, [proyectoId, repoUrl])
 
   useEffect(() => { cargar() }, [cargar])
 
@@ -40,14 +55,11 @@ export default function Commits({ repo }) {
   return (
     <>
       <div className="entre" style={{ marginBottom: 10 }}>
-        <span className="linea mini suave">
-          <span className="chip">{repo.propietario}/{repo.nombre}</span>
-          <span>rama {repo.rama}</span>
-        </span>
+        <span className="chip">{repoTexto(repoUrl)}</span>
         <span className="linea">
           <a
             className="boton sm"
-            href={`https://github.com/${repo.propietario}/${repo.nombre}/commits/${repo.rama}`}
+            href={`https://github.com/${repo.propietario}/${repo.nombre}/commits`}
             target="_blank"
             rel="noreferrer"
           >
@@ -62,7 +74,7 @@ export default function Commits({ repo }) {
       {error && <div className="aviso alerta">{error}</div>}
 
       {!error && commits.length === 0 && !cargando && (
-        <p className="suave mini">Sin commits para mostrar en esta rama.</p>
+        <p className="suave mini">Sin commits para mostrar.</p>
       )}
 
       {commits.map((c) => (

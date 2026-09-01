@@ -77,12 +77,33 @@ valor solo se respeta si coincide con la lista de arriba.
 ## GitHub
 
 Cada proyecto guarda su `repo_url` y la ficha lista los últimos commits: quién,
-qué y cuándo, con enlace a GitHub. Funciona con repositorios públicos, porque la
-llamada sale del navegador sin credenciales.
+qué y cuándo, con enlace a GitHub.
 
-Para un repositorio **privado** hace falta un token, y un token en el navegador
-queda a la vista de quien abra esa sesión. Se resuelve moviendo la llamada a una
-función del servidor; está pendiente.
+La lectura no sale del navegador, sino de la función `commits`
+(`supabase/functions/commits/`). Está así por dos razones:
+
+- **El token vive en el servidor.** En el navegador quedaría a la vista de quien
+  abriera esa sesión, y habría que repartirlo a cada socio para que viera los
+  commits de un repositorio privado.
+- **Quien pregunta no elige el repositorio.** Manda el id de un proyecto, y la
+  función consulta la base *con la sesión de esa persona*: si el proyecto no le
+  corresponde, no obtiene nada. Sin eso, la función sería un túnel para leer
+  cualquier repositorio privado con el token del servidor.
+
+### Configurar el token
+
+Sin token, los repositorios públicos funcionan y los privados devuelven un aviso
+diciendo que falta. Para los privados, en el panel de Supabase:
+**Project Settings → Edge Functions → Secrets**, agregar `GITHUB_TOKEN`.
+
+Conviene un token *fine-grained* con permiso **Contents: Read-only** y solo
+sobre los repositorios que se vayan a mostrar. Con eso basta: la función nunca
+escribe en GitHub.
+
+Comprobado con usuarios de prueba: un socio del espacio «Jose» recibe los
+commits de Clínica; el mismo socio pidiendo un proyecto del espacio «Personal»
+recibe «Proyecto no disponible»; alguien sin espacios no recibe nada; y sin
+sesión la función rechaza la petición.
 
 ## Qué falta
 

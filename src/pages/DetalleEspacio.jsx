@@ -4,6 +4,7 @@ import { useDatos } from '../lib/datos.jsx'
 import { ROLES, color, estadoProyecto, rol as rolPorId } from '../data/modelo.js'
 import { avance } from '../lib/calculos.js'
 import { formatearFecha } from '../lib/formato.js'
+import { repoTexto } from '../lib/github.js'
 import { Avatar, Barra, Etiqueta, Modal, Vacio } from '../components/Piezas.jsx'
 import FormularioEspacio from '../components/FormularioEspacio.jsx'
 
@@ -158,7 +159,7 @@ export default function DetalleEspacio() {
                     <tr key={x.id}>
                       <td><Link to={`/proyectos/${x.id}`} style={{ fontWeight: 600 }}>{x.name}</Link></td>
                       <td><Etiqueta item={estadoProyecto(x.status)} /></td>
-                      <td className="mini suave recorte">{x.repo_url?.replace('https://github.com/', '') ?? '—'}</td>
+                      <td className="mini suave recorte">{repoTexto(x.repo_url) || '—'}</td>
                       <td className="suave">{formatearFecha(x.due_date)}</td>
                       <td>
                         <div className="mini suave">{pct}%</div>
