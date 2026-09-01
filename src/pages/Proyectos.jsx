@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAlmacen } from '../lib/almacen.jsx'
-import { ESTADOS_PROYECTO, PRIORIDADES, estadoProyecto, prioridad } from '../data/modelo.js'
-import { avanceProyecto, nombrePorId, tareasDeProyecto } from '../lib/calculos.js'
+import {
+  ESTADOS_PROYECTO, PRIORIDADES, estadoProyecto, prioridad, repoTexto,
+} from '../data/modelo.js'
+import { avanceProyecto, tareasDeProyecto } from '../lib/calculos.js'
 import { formatearFecha } from '../lib/formato.js'
 import { Barra, Etiqueta, Modal, PilaAvatares, Vacio } from '../components/Piezas.jsx'
 import FormularioProyecto from '../components/FormularioProyecto.jsx'
@@ -15,56 +17,66 @@ const ORDENES = [
 ]
 
 export default function Proyectos() {
-  const { proyectos, colaboradores, tareas, guardarProyecto } = useAlmacen()
+  const {
+    misProyectos, misEspacios, espacioId, colaboradores, misTareas,
+    guardarProyecto, permisosEn, personasDe,
+  } = useAlmacen()
+
   const [busqueda, setBusqueda] = useState('')
   const [filtroEstado, setFiltroEstado] = useState('')
   const [filtroPrioridad, setFiltroPrioridad] = useState('')
-  const [filtroColaborador, setFiltroColaborador] = useState('')
   const [orden, setOrden] = useState('entrega')
   const [creando, setCreando] = useState(false)
 
+  // Espacios donde esta persona puede dar de alta proyectos.
+  const espaciosEditables = misEspacios.filter((e) => permisosEn(e.id).crearProyecto)
+  const puedeCrear = espaciosEditables.length > 0
+
+  const nombreEspacio = (id) => misEspacios.find((e) => e.id === id)
+  const nombrePersona = (id) => colaboradores.find((c) => c.id === id)?.nombre ?? 'Sin asignar'
+
   const lista = useMemo(() => {
     const texto = busqueda.trim().toLowerCase()
-    const pesoPrioridad = { alta: 0, media: 1, baja: 2 }
+    const peso = { alta: 0, media: 1, baja: 2 }
 
-    return proyectos
+    return misProyectos
       .filter((p) => {
         if (filtroEstado && p.estado !== filtroEstado) return false
         if (filtroPrioridad && p.prioridad !== filtroPrioridad) return false
-        if (
-          filtroColaborador &&
-          p.responsableId !== filtroColaborador &&
-          !p.colaboradorIds.includes(filtroColaborador)
-        ) {
-          return false
-        }
         if (!texto) return true
-        return [p.nombre, p.cliente, p.descripcion]
+        return [p.nombre, p.cliente, p.descripcion, repoTexto(p.repo)]
           .filter(Boolean)
           .some((campo) => campo.toLowerCase().includes(texto))
       })
       .sort((a, b) => {
         if (orden === 'nombre') return a.nombre.localeCompare(b.nombre)
-        if (orden === 'prioridad') return pesoPrioridad[a.prioridad] - pesoPrioridad[b.prioridad]
-        if (orden === 'avance') return avanceProyecto(b, tareas) - avanceProyecto(a, tareas)
+        if (orden === 'prioridad') return peso[a.prioridad] - peso[b.prioridad]
+        if (orden === 'avance') return avanceProyecto(b, misTareas) - avanceProyecto(a, misTareas)
         return (a.fechaFin || '9999-99-99').localeCompare(b.fechaFin || '9999-99-99')
       })
-  }, [proyectos, tareas, busqueda, filtroEstado, filtroPrioridad, filtroColaborador, orden])
+  }, [misProyectos, misTareas, busqueda, filtroEstado, filtroPrioridad, orden])
 
   return (
     <>
       <div className="encabezado">
         <div>
           <h1>Proyectos</h1>
-          <p>{proyectos.length} registrado(s) · {lista.length} mostrado(s)</p>
+          <p>
+            {espacioId
+              ? `Espacio: ${nombreEspacio(espacioId)?.nombre ?? '—'}`
+              : `Todos mis espacios (${misEspacios.length})`}{' '}
+            · {lista.length} de {misProyectos.length}
+          </p>
         </div>
-        <button className="boton primario" onClick={() => setCreando(true)}>+ Nuevo proyecto</button>
+        {puedeCrear && (
+          <button className="boton primario" onClick={() => setCreando(true)}>+ Nuevo proyecto</button>
+        )}
       </div>
 
       <div className="filtros">
         <input
           type="search"
-          placeholder="Buscar por nombre, cliente o descripción…"
+          placeholder="Buscar por nombre, cliente, descripción o repo…"
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
         />
@@ -80,12 +92,6 @@ export default function Proyectos() {
             <option key={e.id} value={e.id}>{e.nombre}</option>
           ))}
         </select>
-        <select value={filtroColaborador} onChange={(e) => setFiltroColaborador(e.target.value)}>
-          <option value="">Todo el equipo</option>
-          {colaboradores.map((c) => (
-            <option key={c.id} value={c.id}>{c.nombre}</option>
-          ))}
-        </select>
         <select value={orden} onChange={(e) => setOrden(e.target.value)}>
           {ORDENES.map((o) => (
             <option key={o.id} value={o.id}>Ordenar por: {o.nombre}</option>
@@ -95,26 +101,29 @@ export default function Proyectos() {
 
       {lista.length === 0 ? (
         <Vacio
-          titulo={proyectos.length === 0 ? 'Todavía no hay proyectos' : 'Sin resultados'}
+          titulo={misProyectos.length === 0 ? 'Todavía no hay proyectos' : 'Sin resultados'}
           texto={
-            proyectos.length === 0
-              ? 'Crea el primer proyecto para empezar a organizar el trabajo.'
+            misProyectos.length === 0
+              ? puedeCrear
+                ? 'Crea el primero y asígnalo al espacio que corresponda.'
+                : 'No tienes proyectos asignados en este momento.'
               : 'Ningún proyecto coincide con los filtros aplicados.'
           }
           accion={
-            proyectos.length === 0 && (
+            misProyectos.length === 0 && puedeCrear ? (
               <button className="boton primario" onClick={() => setCreando(true)}>
                 + Nuevo proyecto
               </button>
-            )
+            ) : null
           }
         />
       ) : (
         <div className="rejilla cards">
           {lista.map((p) => {
-            const avance = avanceProyecto(p, tareas)
-            const propias = tareasDeProyecto(p.id, tareas)
-            const equipo = p.colaboradorIds.map((id) => nombrePorId(colaboradores, id))
+            const avance = avanceProyecto(p, misTareas)
+            const propias = tareasDeProyecto(p.id, misTareas)
+            const espacio = nombreEspacio(p.espacioId)
+            const equipo = p.colaboradorIds.map(nombrePersona)
             return (
               <Link key={p.id} to={`/proyectos/${p.id}`} className="tarjeta tarjeta-enlace">
                 <div className="entre" style={{ marginBottom: 8 }}>
@@ -123,8 +132,14 @@ export default function Proyectos() {
                 </div>
 
                 <div className="envuelve" style={{ marginBottom: 10 }}>
+                  {espacio && (
+                    <span className="chip linea">
+                      <span className="punto-espacio" style={{ background: espacio.color }} />
+                      {espacio.nombre}
+                    </span>
+                  )}
                   <Etiqueta item={estadoProyecto(p.estado)} />
-                  {p.cliente && <span className="chip">{p.cliente}</span>}
+                  {repoTexto(p.repo) && <span className="chip">⎇ {repoTexto(p.repo)}</span>}
                 </div>
 
                 {p.descripcion && (
@@ -135,13 +150,17 @@ export default function Proyectos() {
 
                 <div className="entre mini suave" style={{ marginBottom: 5 }}>
                   <span>Avance</span>
-                  <span>{avance}% · {propias.filter((t) => t.estado === 'completada').length}/{propias.length} tareas</span>
+                  <span>
+                    {avance}% · {propias.filter((t) => t.estado === 'completada').length}/{propias.length} tareas
+                  </span>
                 </div>
                 <Barra valor={avance} />
 
                 <div className="entre" style={{ marginTop: 12 }}>
                   <span className="mini suave">Entrega: {formatearFecha(p.fechaFin)}</span>
-                  {equipo.length > 0 ? <PilaAvatares nombres={equipo} /> : <span className="mini suave">Sin equipo</span>}
+                  {equipo.length > 0
+                    ? <PilaAvatares nombres={equipo} />
+                    : <span className="mini suave">Sin equipo</span>}
                 </div>
               </Link>
             )
@@ -152,7 +171,9 @@ export default function Proyectos() {
       {creando && (
         <Modal titulo="Nuevo proyecto" onCerrar={() => setCreando(false)}>
           <FormularioProyecto
-            colaboradores={colaboradores}
+            espacios={espaciosEditables}
+            espacioPorDefecto={espacioId}
+            personasDe={personasDe}
             onCancelar={() => setCreando(false)}
             onGuardar={(p) => {
               guardarProyecto(p)

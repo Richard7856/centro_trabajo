@@ -1,96 +1,118 @@
-// Datos de ejemplo para ver la plataforma funcionando antes de cargar los
-// perfiles reales. Se pueden borrar de un clic desde Ajustes.
-
-export const ES_DEMO = true
+// Datos iniciales: las personas y los cuatro espacios de trabajo.
+// Los proyectos se van cargando desde la app; aquí solo queda la estructura.
 
 export const semilla = {
   colaboradores: [
     {
-      id: 'col_demo1',
-      nombre: 'Colaborador de ejemplo A',
-      rol: 'Coordinador de proyecto',
-      area: 'Operaciones',
-      email: 'ejemplo.a@centro.local',
+      id: 'col_richard',
+      nombre: 'Richard',
+      rol: 'Desarrollo',
+      area: 'Dirección',
+      email: 'rifigue97@gmail.com',
       telefono: '',
-      fechaIngreso: '2025-02-03',
-      habilidades: ['Planeación', 'Seguimiento'],
-      notas: 'Registro de ejemplo. Reemplazar por un perfil real.',
+      fechaIngreso: '',
+      habilidades: ['Desarrollo', 'Arquitectura'],
+      notas: 'Dueño de los cuatro espacios.',
       activo: true,
     },
     {
-      id: 'col_demo2',
-      nombre: 'Colaborador de ejemplo B',
-      rol: 'Analista',
-      area: 'Administración',
-      email: 'ejemplo.b@centro.local',
+      id: 'col_jose',
+      nombre: 'Jose',
+      rol: 'Socio comercial',
+      area: 'Ventas',
+      email: '',
       telefono: '',
-      fechaIngreso: '2025-06-16',
-      habilidades: ['Reportes', 'Excel'],
+      fechaIngreso: '',
+      habilidades: ['Ventas'],
+      notas: 'Vende; Richard desarrolla.',
+      activo: true,
+    },
+    {
+      id: 'col_jaime',
+      nombre: 'Jaime',
+      rol: 'Socio',
+      area: '',
+      email: '',
+      telefono: '',
+      fechaIngreso: '',
+      habilidades: [],
+      notas: '',
+      activo: true,
+    },
+    {
+      id: 'col_yimi',
+      nombre: 'Yimi',
+      rol: 'Socio',
+      area: '',
+      email: '',
+      telefono: '',
+      fechaIngreso: '',
+      habilidades: [],
       notas: '',
       activo: true,
     },
   ],
-  proyectos: [
+
+  // Cada sociedad es un compartimento estanco: quien está en uno no ve los otros
+  // ni sabe que existen.
+  espacios: [
     {
-      id: 'prj_demo1',
-      nombre: 'Proyecto de ejemplo',
-      cliente: 'Cliente interno',
-      descripcion:
-        'Proyecto de muestra para revisar cómo se ven la ficha, el equipo y las tareas.',
-      estado: 'en_progreso',
-      prioridad: 'alta',
-      fechaInicio: '2026-08-03',
-      fechaFin: '2026-10-30',
-      responsableId: 'col_demo1',
-      colaboradorIds: ['col_demo1', 'col_demo2'],
+      id: 'esp_jose',
+      nombre: 'Jose & Richard',
+      tipo: 'sociedad',
+      descripcion: 'Jose vende, Richard desarrolla.',
+      color: '#2563eb',
+      repoPorDefecto: { propietario: 'Richard7856', nombre: '', rama: 'main' },
     },
     {
-      id: 'prj_demo2',
-      nombre: 'Segundo proyecto de ejemplo',
-      cliente: '',
-      descripcion: 'Sirve para ver el tablero con más de una tarjeta.',
-      estado: 'planeado',
-      prioridad: 'media',
-      fechaInicio: '2026-09-15',
-      fechaFin: '',
-      responsableId: 'col_demo2',
-      colaboradorIds: ['col_demo2'],
-    },
-  ],
-  tareas: [
-    {
-      id: 'tar_demo1',
-      proyectoId: 'prj_demo1',
-      titulo: 'Definir alcance con el cliente',
-      estado: 'completada',
-      asignadoId: 'col_demo1',
-      fechaLimite: '2026-08-14',
+      id: 'esp_jaime',
+      nombre: 'Jaime & Richard',
+      tipo: 'sociedad',
+      descripcion: '',
+      color: '#7c3aed',
+      repoPorDefecto: { propietario: 'Richard7856', nombre: '', rama: 'main' },
     },
     {
-      id: 'tar_demo2',
-      proyectoId: 'prj_demo1',
-      titulo: 'Armar cronograma de entregas',
-      estado: 'en_progreso',
-      asignadoId: 'col_demo1',
-      fechaLimite: '2026-09-05',
+      id: 'esp_yimi',
+      nombre: 'Yimi & Richard',
+      tipo: 'sociedad',
+      descripcion: '',
+      color: '#0891b2',
+      repoPorDefecto: { propietario: 'Richard7856', nombre: '', rama: 'main' },
     },
     {
-      id: 'tar_demo3',
-      proyectoId: 'prj_demo1',
-      titulo: 'Primer reporte de avance',
-      estado: 'pendiente',
-      asignadoId: 'col_demo2',
-      fechaLimite: '2026-09-30',
-    },
-    {
-      id: 'tar_demo4',
-      proyectoId: 'prj_demo2',
-      titulo: 'Levantar requerimientos',
-      estado: 'pendiente',
-      asignadoId: 'col_demo2',
-      fechaLimite: '',
+      id: 'esp_personal',
+      nombre: 'Proyectos personales',
+      tipo: 'personal',
+      descripcion: 'Solo Richard.',
+      color: '#16a34a',
+      repoPorDefecto: { propietario: 'Richard7856', nombre: '', rama: 'main' },
     },
   ],
+
+  miembros: [
+    { id: 'mbr_r_jose', espacioId: 'esp_jose', colaboradorId: 'col_richard', rolEspacio: 'dueno' },
+    { id: 'mbr_jose', espacioId: 'esp_jose', colaboradorId: 'col_jose', rolEspacio: 'socio' },
+
+    { id: 'mbr_r_jaime', espacioId: 'esp_jaime', colaboradorId: 'col_richard', rolEspacio: 'dueno' },
+    { id: 'mbr_jaime', espacioId: 'esp_jaime', colaboradorId: 'col_jaime', rolEspacio: 'socio' },
+
+    { id: 'mbr_r_yimi', espacioId: 'esp_yimi', colaboradorId: 'col_richard', rolEspacio: 'dueno' },
+    { id: 'mbr_yimi', espacioId: 'esp_yimi', colaboradorId: 'col_yimi', rolEspacio: 'socio' },
+
+    { id: 'mbr_r_personal', espacioId: 'esp_personal', colaboradorId: 'col_richard', rolEspacio: 'dueno' },
+  ],
+
+  proyectos: [],
+  tareas: [],
 }
 
-export const vacio = { colaboradores: [], proyectos: [], tareas: [] }
+export const vacio = {
+  colaboradores: [],
+  espacios: [],
+  miembros: [],
+  proyectos: [],
+  tareas: [],
+}
+
+export const USUARIO_POR_DEFECTO = 'col_richard'

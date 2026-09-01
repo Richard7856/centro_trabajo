@@ -3,9 +3,16 @@ import { useAlmacen } from '../lib/almacen.jsx'
 
 export default function Ajustes() {
   const almacen = useAlmacen()
-  const { colaboradores, proyectos, tareas, demo } = almacen
+  const {
+    colaboradores, espacios, miembros, proyectos, tareas,
+    tokenGithub, setTokenGithub, usuario, misEspacios, permisosEn,
+  } = almacen
+
   const archivo = useRef(null)
   const [mensaje, setMensaje] = useState(null)
+  const [token, setToken] = useState(tokenGithub)
+
+  const esDueno = misEspacios.some((e) => permisosEn(e.id).esDueno)
 
   function avisar(texto, error = false) {
     setMensaje({ texto, error })
@@ -39,34 +46,86 @@ export default function Ajustes() {
       <div className="encabezado">
         <div>
           <h1>Ajustes</h1>
-          <p>Respaldo de la información y limpieza de los datos de ejemplo.</p>
+          <p>Sesión actual: {usuario?.nombre ?? '—'}</p>
         </div>
       </div>
 
       {mensaje && (
-        <div className="aviso" style={mensaje.error ? { color: 'var(--peligro)', borderColor: 'var(--peligro)', background: 'transparent' } : undefined}>
+        <div
+          className="aviso"
+          style={mensaje.error ? { color: 'var(--peligro)', borderColor: 'var(--peligro)', background: 'transparent' } : undefined}
+        >
           {mensaje.texto}
         </div>
       )}
 
+      <div className="aviso alerta">
+        Los datos viven en este navegador y el aislamiento entre espacios es solo de
+        pantalla. Antes de compartir el acceso con alguien, hay que moverlos al
+        servidor con inicio de sesión.
+      </div>
+
       <div className="rejilla dos">
         <section className="tarjeta">
-          <h2 style={{ marginBottom: 10 }}>Contenido actual</h2>
+          <h2 style={{ marginBottom: 10 }}>Contenido</h2>
           <table className="tabla">
             <tbody>
-              <tr><td className="suave">Colaboradores</td><td>{colaboradores.length}</td></tr>
+              <tr><td className="suave">Espacios</td><td>{espacios.length}</td></tr>
+              <tr><td className="suave">Personas</td><td>{colaboradores.length}</td></tr>
+              <tr><td className="suave">Membresías</td><td>{miembros.length}</td></tr>
               <tr><td className="suave">Proyectos</td><td>{proyectos.length}</td></tr>
               <tr><td className="suave">Tareas</td><td>{tareas.length}</td></tr>
-              <tr><td className="suave">Origen</td><td>{demo ? 'Datos de ejemplo' : 'Datos propios'}</td></tr>
             </tbody>
           </table>
         </section>
 
         <section className="tarjeta">
+          <h2 style={{ marginBottom: 10 }}>Acceso a GitHub</h2>
+          <p className="mini suave">
+            Para leer los commits de un repositorio privado. El token se guarda solo en
+            este equipo y nunca se incluye en los respaldos ni viaja con los proyectos.
+            Basta un token de solo lectura sobre los repos que quieras mostrar.
+          </p>
+          <div className="campo">
+            <label>Token personal de GitHub</label>
+            <input
+              type="password"
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+              placeholder={tokenGithub ? '•••••••• (guardado)' : 'github_pat_…'}
+              autoComplete="off"
+            />
+          </div>
+          <div className="acciones">
+            <button
+              className="boton primario"
+              onClick={() => {
+                setTokenGithub(token.trim())
+                avisar(token.trim() ? 'Token guardado en este equipo.' : 'Token eliminado.')
+              }}
+            >
+              Guardar token
+            </button>
+            {tokenGithub && (
+              <button
+                className="boton"
+                onClick={() => {
+                  setToken('')
+                  setTokenGithub('')
+                  avisar('Token eliminado de este equipo.')
+                }}
+              >
+                Quitar
+              </button>
+            )}
+          </div>
+        </section>
+
+        <section className="tarjeta">
           <h2 style={{ marginBottom: 10 }}>Respaldo</h2>
           <p className="mini suave">
-            La información se guarda en este navegador. Exporta un archivo JSON para
-            respaldarla o pasarla a otro equipo.
+            Exporta un archivo JSON con espacios, personas, proyectos y tareas para
+            respaldarlos o pasarlos a otro equipo.
           </p>
           <div className="acciones">
             <button className="boton" onClick={descargar}>Exportar JSON</button>
@@ -81,45 +140,39 @@ export default function Ajustes() {
           </div>
         </section>
 
-        <section className="tarjeta">
-          <h2 style={{ marginBottom: 10 }}>Datos de ejemplo</h2>
-          <p className="mini suave">
-            Empieza de cero cuando vayas a cargar los perfiles y proyectos reales.
-          </p>
-          <div className="acciones">
-            <button
-              className="boton peligro"
-              onClick={() => {
-                if (confirm('¿Borrar todo el contenido? Esta acción no se puede deshacer.')) {
-                  almacen.vaciar()
-                  avisar('Contenido borrado. Ya puedes cargar los datos reales.')
-                }
-              }}
-            >
-              Empezar de cero
-            </button>
-            <button
-              className="boton"
-              onClick={() => {
-                if (confirm('¿Reemplazar el contenido actual por los datos de ejemplo?')) {
-                  almacen.restaurarEjemplo()
-                  avisar('Datos de ejemplo restaurados.')
-                }
-              }}
-            >
-              Restaurar ejemplo
-            </button>
-          </div>
-        </section>
-
-        <section className="tarjeta">
-          <h2 style={{ marginBottom: 10 }}>Siguiente paso</h2>
-          <p className="mini suave" style={{ marginBottom: 0 }}>
-            Cuando la plataforma esté como la quieres, el siguiente paso es cargar el
-            perfil de José y el resto del equipo, y después conectar una base de datos
-            para que la información se comparta entre dispositivos.
-          </p>
-        </section>
+        {esDueno && (
+          <section className="tarjeta">
+            <h2 style={{ marginBottom: 10 }}>Reiniciar</h2>
+            <p className="mini suave">
+              «Borrar todo» deja la aplicación vacía. «Restaurar estructura» vuelve a los
+              cuatro espacios iniciales sin proyectos.
+            </p>
+            <div className="acciones">
+              <button
+                className="boton peligro"
+                onClick={() => {
+                  if (confirm('¿Borrar todo el contenido? No se puede deshacer.')) {
+                    almacen.vaciar()
+                    avisar('Contenido borrado.')
+                  }
+                }}
+              >
+                Borrar todo
+              </button>
+              <button
+                className="boton"
+                onClick={() => {
+                  if (confirm('¿Volver a los espacios iniciales? Se pierde lo capturado.')) {
+                    almacen.restaurarEstructura()
+                    avisar('Estructura restaurada.')
+                  }
+                }}
+              >
+                Restaurar estructura
+              </button>
+            </div>
+          </section>
+        )}
       </div>
     </>
   )
