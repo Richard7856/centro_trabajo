@@ -90,20 +90,48 @@ La lectura no sale del navegador, sino de la función `commits`
   corresponde, no obtiene nada. Sin eso, la función sería un túnel para leer
   cualquier repositorio privado con el token del servidor.
 
-### Configurar el token
+### Dar acceso a los repositorios privados
 
-Sin token, los repositorios públicos funcionan y los privados devuelven un aviso
-diciendo que falta. Para los privados, en el panel de Supabase:
-**Project Settings → Edge Functions → Secrets**, agregar `GITHUB_TOKEN`.
+**No hace falta un token por repositorio.** Un solo acceso cubre todos. Hay dos
+formas, y la función acepta cualquiera de las dos sin cambiar código.
 
-Conviene un token *fine-grained* con permiso **Contents: Read-only** y solo
-sobre los repositorios que se vayan a mostrar. Con eso basta: la función nunca
-escribe en GitHub.
+#### Opción A — GitHub App (automática, nada que renovar)
 
-Comprobado con usuarios de prueba: un socio del espacio «Jose» recibe los
-commits de Clínica; el mismo socio pidiendo un proyecto del espacio «Personal»
-recibe «Proyecto no disponible»; alguien sin espacios no recibe nada; y sin
-sesión la función rechaza la petición.
+La App emite sus propios tokens de una hora y la función los renueva sola. Es la
+vía recomendada si no quieres acordarte de nada.
+
+1. GitHub → Settings → Developer settings → **GitHub Apps** → New GitHub App.
+2. Ponle nombre y una Homepage URL. **Desmarca** Webhook → Active.
+3. Permissions → Repository permissions → **Contents: Read-only**.
+   (Metadata: Read-only se agrega solo.)
+4. Where can this be installed → *Only on this account*. Crear.
+5. Anota el **App ID** y genera una **private key** (descarga un `.pem`).
+6. **Install App** en tu cuenta → *All repositories*.
+7. En Supabase → Project Settings → Edge Functions → Secrets:
+   - `GITHUB_APP_ID` — el número
+   - `GITHUB_APP_PRIVATE_KEY` — el contenido completo del `.pem`, con sus
+     líneas `BEGIN`/`END`
+
+La llave viene en PKCS#1 y Web Crypto solo importa PKCS#8; la función hace esa
+conversión sola, así que se pega tal cual viene.
+
+Opcional: `GITHUB_APP_INSTALLATION_ID` si la App queda instalada en más de una
+cuenta y quieres fijar cuál se usa.
+
+#### Opción B — un token personal (dos minutos)
+
+GitHub → Settings → Developer settings → Personal access tokens →
+**Fine-grained tokens**. Repository access: **All repositories**. Permissions →
+**Contents: Read-only**. Guardarlo en Supabase como `GITHUB_TOKEN`.
+
+Es más rápido de montar, pero caduca y hay que renovarlo. Un token *classic* con
+alcance `repo` también sirve y puede no caducar, pero concede lectura **y
+escritura** sobre todo: para mostrar commits es más permiso del necesario.
+
+#### Sin ninguna de las dos
+
+Los repositorios públicos funcionan igual. Los privados devuelven un aviso que
+dice qué falta, en lugar de un error opaco.
 
 ## Qué falta
 
