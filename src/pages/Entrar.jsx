@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useSesion } from '../lib/sesion.jsx'
 import { configurado } from '../lib/supabase.js'
+import Marca from '../components/Marca.jsx'
 
 export default function Entrar() {
   const { entrar, registrar, recuperar } = useSesion()
@@ -57,7 +58,7 @@ export default function Entrar() {
     <div className="portada">
       <form className="tarjeta acceso" onSubmit={enviar}>
         <div className="marca" style={{ padding: 0, marginBottom: 18 }}>
-          <div className="marca-logo">CT</div>
+          <Marca />
           <div>
             <div className="marca-texto">Centro de Trabajo</div>
             <div className="marca-sub">Organizador de proyectos</div>

@@ -3,6 +3,8 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  base: './',
+  // Rutas absolutas: con rutas reales (no con almohadilla), una ruta como
+  // /proyectos buscaría los assets en /proyectos/assets/ si la base fuera relativa.
+  base: '/',
   server: { port: 5173, host: true },
 })

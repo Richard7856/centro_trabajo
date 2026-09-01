@@ -49,6 +49,24 @@ Vite las incrusta **al construir**, no al arrancar: después de agregarlas hay
 que volver a desplegar. Si faltan, la aplicación lo dice en la pantalla de
 acceso en vez de fallar en cada consulta.
 
+## Correo de confirmación
+
+El enlace del correo lo arma **Supabase**, no la aplicación. De fábrica usa el
+`Site URL` del proyecto, que apunta a `http://localhost:3000`: por eso un
+correo abierto en el teléfono lleva a una página que no existe.
+
+En el panel de Supabase, **Authentication → URL Configuration**:
+
+- **Site URL**: `https://centro-trabajo.vercel.app`
+- **Redirect URLs**, una por línea:
+  - `https://centro-trabajo.vercel.app/**`
+  - `https://centro-trabajo-*-richards-projects-b633518f.vercel.app/**` (vistas previas)
+  - `http://localhost:5173/**` (desarrollo)
+
+La aplicación además manda `emailRedirectTo` con el origen desde el que se
+registró, así el correo vuelve al mismo sitio donde se estaba trabajando. Ese
+valor solo se respeta si coincide con la lista de arriba.
+
 ## Primer arranque
 
 1. Crear la cuenta desde la pantalla de acceso. Un disparador crea el perfil.

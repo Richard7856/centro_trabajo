@@ -1,4 +1,5 @@
 import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
+import Marca from './components/Marca.jsx'
 import { useSesion } from './lib/sesion.jsx'
 import { useDatos } from './lib/datos.jsx'
 import { color } from './data/modelo.js'
@@ -37,7 +38,7 @@ export default function App() {
     <div className="app">
       <aside className="lateral">
         <div className="marca">
-          <div className="marca-logo">CT</div>
+          <Marca />
           <div>
             <div className="marca-texto">Centro de Trabajo</div>
             <div className="marca-sub">Organizador de proyectos</div>

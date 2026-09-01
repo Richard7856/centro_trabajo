@@ -56,11 +56,17 @@ export function ProveedorSesion({ children }) {
     entrar: (email, password) =>
       supabase.auth.signInWithPassword({ email: email.trim(), password }),
 
+    // El enlace del correo debe volver a donde está corriendo la aplicación.
+    // Sin esto, Supabase usa el "Site URL" del proyecto, que de fábrica apunta
+    // a localhost y deja el correo inservible para quien lo recibe.
     registrar: (email, password, nombre) =>
       supabase.auth.signUp({
         email: email.trim(),
         password,
-        options: { data: { full_name: nombre.trim() || email.split('@')[0] } },
+        options: {
+          data: { full_name: nombre.trim() || email.split('@')[0] },
+          emailRedirectTo: window.location.origin,
+        },
       }),
 
     recuperar: (email) =>
