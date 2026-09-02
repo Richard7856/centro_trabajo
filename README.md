@@ -109,12 +109,19 @@ La aplicación además manda `emailRedirectTo` con el origen desde el que se
 registró, así el correo vuelve al mismo sitio donde se estaba trabajando. Ese
 valor solo se respeta si coincide con la lista de arriba.
 
-## Primer arranque
+## Cuentas nuevas
 
-1. Crear la cuenta desde la pantalla de acceso. Un disparador crea el perfil.
-2. El panel ofrece el botón **Crear mis espacios**, que llama una sola vez a
-   `sembrar_organizador()`: deja los cinco espacios —Jose, Jaime, Yimi, Personal
-   y Access archivado—, los dos proyectos y sus 23 tareas.
+Cualquiera puede crear su cuenta desde la pantalla de acceso; un disparador le
+crea el perfil. Pero **una cuenta nueva no pertenece a ningún espacio**, así que
+no ve ni un proyecto hasta que el dueño de un espacio la agrega por su correo.
+
+El mensaje que ve mientras tanto no nombra espacios ni personas: quien acaba de
+llegar no tiene por qué saber con quién más se trabaja.
+
+La siembra inicial (`sembrar_organizador()`) se retiró en la migración 0009.
+Estaba concedida a cualquier sesión iniciada, así que un socio o un cliente
+entrando por primera vez podía quedarse con su propia copia de los cinco
+espacios y las 23 tareas. Ya cumplió su función de arranque.
 
 ## GitHub
 

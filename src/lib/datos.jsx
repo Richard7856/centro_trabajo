@@ -136,13 +136,6 @@ export function ProveedorDatos({ children }) {
       },
       miembrosDe: (id) => miembros.filter((m) => m.space_id === id),
 
-      sembrar: async () => {
-        const { data, error: err } = await supabase.rpc('sembrar_organizador')
-        if (err) throw new Error(traducir(err))
-        await recargar()
-        return data
-      },
-
       crearEspacio: (campos) =>
         escribir(supabase.from('spaces').insert({ ...campos, owner_id: usuarioId })),
       guardarEspacio: ({ id, ...campos }) =>

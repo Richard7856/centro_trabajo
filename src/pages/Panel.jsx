@@ -1,6 +1,6 @@
-import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useDatos } from '../lib/datos.jsx'
+import { useSesion } from '../lib/sesion.jsx'
 import {
   ESTADOS_PROYECTO, color, dinero, estadoProyecto, rol as rolPorId,
 } from '../data/modelo.js'
@@ -19,37 +19,19 @@ function Kpi({ etiqueta, valor, tono }) {
   )
 }
 
-// Primera vez: la cuenta existe pero todavía no tiene espacios.
-function Arranque() {
-  const { sembrar } = useDatos()
-  const [ocupado, setOcupado] = useState(false)
-  const [error, setError] = useState('')
-
+// Una cuenta puede existir sin pertenecer a ningún espacio: es lo normal al
+// registrarse. El mensaje no nombra espacios ni personas, porque quien llega
+// aquí no tiene por qué saber con quién más se trabaja.
+function SinEspacios() {
+  const { correo } = useSesion()
   return (
     <div className="tarjeta vacio">
-      <h3>Tu cuenta todavía no tiene espacios</h3>
+      <h3>Todavía no tienes acceso a ningún espacio</h3>
       <p>
-        Puedo crear los cinco espacios acordados —Jose, Jaime, Yimi, Personal y
-        Access archivado— con los dos proyectos y sus 23 tareas.
+        Tu cuenta quedó creada con <strong>{correo}</strong>. Quien te invitó
+        tiene que darte acceso con ese mismo correo; en cuanto lo haga, aquí
+        aparecerán tus proyectos.
       </p>
-      {error && <p className="mini vencida">{error}</p>}
-      <button
-        className="boton primario"
-        disabled={ocupado}
-        onClick={async () => {
-          setOcupado(true)
-          setError('')
-          try {
-            await sembrar()
-          } catch (e) {
-            setError(e.message)
-          } finally {
-            setOcupado(false)
-          }
-        }}
-      >
-        {ocupado ? 'Creando…' : 'Crear mis espacios'}
-      </button>
     </div>
   )
 }
@@ -64,7 +46,7 @@ export default function Panel() {
     return (
       <>
         <div className="encabezado"><div><h1>Panel</h1></div></div>
-        <Arranque />
+        <SinEspacios />
       </>
     )
   }
