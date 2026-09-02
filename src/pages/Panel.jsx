@@ -58,6 +58,7 @@ export default function Panel() {
   const ing = ingresos(suscripciones)
   const cob = resumenCobros(cobros)
   const hayDinero = espacios.some((e) => permisosEn(e.id).verDinero)
+  const soloCliente = espacios.length > 0 && espacios.every((e) => permisosEn(e.id).esCliente)
   const nombreProyecto = (id) => proyectos.find((p) => p.id === id)?.name ?? ''
 
   const activos = [...proyectos]
@@ -70,10 +71,14 @@ export default function Panel() {
       <div className="encabezado">
         <div>
           <h1>Panel</h1>
-          <p>{espacioActivo ? `Espacio: ${espacioActivo.name}` : `${espacios.length} espacio(s)`}</p>
+          <p>
+            {soloCliente
+              ? `${proyectos.length} proyecto(s)`
+              : espacioActivo ? `Espacio: ${espacioActivo.name}` : `${espacios.length} espacio(s)`}
+          </p>
         </div>
         <div className="acciones">
-          <Link className="boton" to="/espacios">Espacios</Link>
+          {!soloCliente && <Link className="boton" to="/espacios">Espacios</Link>}
           <Link className="boton primario" to="/proyectos">Ver proyectos</Link>
         </div>
       </div>
@@ -130,7 +135,7 @@ export default function Panel() {
         </section>
       )}
 
-      {!espacioId && (
+      {!espacioId && !soloCliente && (
         <section className="tarjeta" style={{ marginBottom: 14 }}>
           <h2 style={{ marginBottom: 12 }}>Mis espacios</h2>
           <div className="rejilla cards">

@@ -50,8 +50,10 @@ export default function Proyectos() {
         <div>
           <h1>Proyectos</h1>
           <p>
-            {espacioActivo ? `Espacio: ${espacioActivo.name}` : `Todos mis espacios (${espacios.length})`}
-            {' · '}{lista.length} de {proyectos.length}
+            {espacios.every((e) => permisosEn(e.id).esCliente)
+              ? ''
+              : `${espacioActivo ? `Espacio: ${espacioActivo.name}` : `Todos mis espacios (${espacios.length})`} · `}
+            {lista.length} de {proyectos.length}
           </p>
         </div>
         {espaciosEditables.length > 0 && (
@@ -103,7 +105,7 @@ export default function Proyectos() {
                 </div>
 
                 <div className="envuelve" style={{ marginBottom: 10 }}>
-                  {espacio && (
+                  {espacio && !permisosEn(espacio.id).esCliente && (
                     <span className="chip linea">
                       <span className="punto-espacio" style={{ background: color(espacio.color) }} />
                       {espacio.name}

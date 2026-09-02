@@ -41,6 +41,10 @@ export default function App() {
   const vencidos = cobros.filter((c) => c.status === 'vencido').length
   // La sección de dinero solo aparece para quien manda en algún espacio.
   const hayDinero = espacios.some((e) => permisosEn(e.id).verDinero)
+  // Quien solo es cliente no tiene por qué ver el andamiaje de espacios: para
+  // él la aplicación son sus proyectos. Además el nombre de un espacio puede
+  // ser el de otro socio.
+  const soloCliente = espacios.length > 0 && espacios.every((e) => permisosEn(e.id).esCliente)
 
   return (
     <div className="app">
@@ -53,6 +57,7 @@ export default function App() {
           </div>
         </div>
 
+        {!soloCliente && (
         <div className="selector-espacio">
           <label className="mini suave">Espacio</label>
           <select value={espacioId} onChange={(e) => setEspacioId(e.target.value)}>
@@ -64,6 +69,7 @@ export default function App() {
             ))}
           </select>
         </div>
+        )}
 
         <nav className="nav">
           <Enlace a="/">Panel</Enlace>
@@ -71,7 +77,7 @@ export default function App() {
           <Enlace a="/bandeja" conteo={solicitudes}>Bandeja</Enlace>
           <Enlace a="/calendario">Calendario</Enlace>
           {hayDinero && <Enlace a="/cobros" conteo={vencidos}>Cobros</Enlace>}
-          <Enlace a="/espacios" conteo={espacios.length}>Espacios</Enlace>
+          {!soloCliente && <Enlace a="/espacios" conteo={espacios.length}>Espacios</Enlace>}
           <Enlace a="/ajustes">Ajustes</Enlace>
         </nav>
 
@@ -104,8 +110,14 @@ export default function App() {
         ) : (
           <Routes>
             <Route path="/" element={<Panel />} />
-            <Route path="/espacios" element={<Espacios />} />
-            <Route path="/espacios/:id" element={<DetalleEspacio />} />
+            <Route
+              path="/espacios"
+              element={soloCliente ? <Navigate to="/" replace /> : <Espacios />}
+            />
+            <Route
+              path="/espacios/:id"
+              element={soloCliente ? <Navigate to="/" replace /> : <DetalleEspacio />}
+            />
             <Route path="/proyectos" element={<Proyectos />} />
             <Route path="/proyectos/:id" element={<DetalleProyecto />} />
             <Route path="/bandeja" element={<Bandeja />} />

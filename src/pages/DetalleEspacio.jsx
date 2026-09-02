@@ -7,6 +7,7 @@ import { formatearFecha } from '../lib/formato.js'
 import { repoTexto } from '../lib/github.js'
 import { Avatar, Barra, Etiqueta, Modal, Vacio } from '../components/Piezas.jsx'
 import FormularioEspacio from '../components/FormularioEspacio.jsx'
+import Invitar from '../components/Invitar.jsx'
 
 export default function DetalleEspacio() {
   const { id } = useParams()
@@ -180,10 +181,17 @@ export default function DetalleEspacio() {
             {aviso && <p className="mini suave" style={{ marginBottom: 0 }}>{aviso}</p>}
 
             <p className="mini suave" style={{ marginBottom: 0 }}>
-              La persona tiene que haber creado su cuenta antes. Un <strong>cliente</strong>{' '}
-              además no ve nada hasta que se le da acceso a un proyecto concreto,
-              desde la ficha de ese proyecto.
+              Esto funciona si la persona <strong>ya creó su cuenta</strong>. Si
+              todavía no, usa la invitación de abajo.
             </p>
+
+            <h3 style={{ margin: '18px 0 6px' }}>Invitar a alguien nuevo</h3>
+            <p className="mini suave" style={{ marginTop: 0 }}>
+              Genera un enlace que ya trae el espacio y el rol. Para invitar a un{' '}
+              <strong>cliente</strong>, hazlo desde la ficha del proyecto al que
+              debe entrar: así el acceso viene incluido.
+            </p>
+            <Invitar espacioId={espacio.id} rol={rolNuevo} />
           </>
         )}
       </section>

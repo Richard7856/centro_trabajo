@@ -54,17 +54,39 @@ día de cobro se respeta sin arrastre — si es 31 y febrero no llega, se cobra 
 El **Calendario** junta las tres en una vista mensual; el **Panel** levanta lo
 que va tarde.
 
-## Sumar personas a un espacio
+## Sumar personas
 
-Desde la ficha del espacio, el dueño escribe el correo y elige el rol. La
-persona debe haber creado su cuenta antes: no se inventan cuentas.
+**Invitación** (para quien todavía no tiene cuenta). El dueño genera un enlace
+que ya lleva dentro el espacio, el rol y —para un cliente— los proyectos. La
+persona lo abre, crea su cuenta y entra viendo lo suyo, sin pasos intermedios.
 
-Se hace con la función `agregar_miembro()` y no con un INSERT desde la pantalla,
-porque la política de `profiles` solo deja ver a quien ya comparte espacio
-contigo — el dueño no alcanzaría a buscar a alguien recién registrado.
+- Un cliente se invita desde la **ficha del proyecto**: el acceso viene incluido.
+  `crear_invitacion()` rechaza una invitación de cliente sin proyectos, porque
+  entraría a ver una pantalla vacía.
+- El enlace se activa **solo con el correo al que va dirigido**, caduca a los 30
+  días y sirve una vez. Con otro correo devuelve `otro_correo` y no da acceso.
+- El correo no se envía desde la aplicación: no hay servicio de correo
+  configurado. Se copia el enlace y se manda por donde sea. Un enlace pegado en
+  WhatsApp llega hoy.
 
-Un **cliente** además no ve nada hasta que se le da acceso a un proyecto
-concreto, desde la ficha de ese proyecto.
+**Agregar directo** (para quien ya tiene cuenta). Desde la ficha del espacio,
+correo y rol. Se hace con `agregar_miembro()` y no con un INSERT desde la
+pantalla, porque la política de `profiles` solo deja ver a quien ya comparte
+espacio contigo — el dueño no alcanzaría a buscar a alguien recién registrado.
+
+### Lo que ve un cliente
+
+A un cliente se le retira todo el andamiaje de espacios: sin selector, sin la
+sección Espacios, sin Cobros, y la ficha del proyecto no muestra el nombre del
+espacio. Esto no es solo estética — un espacio puede llamarse como otro socio.
+
+Comprobado renderizando la aplicación con la respuesta que la base le da a un
+cliente: el menú queda en Panel, Proyectos, Bandeja, Calendario y Ajustes; la
+palabra del espacio no aparece en ninguna pantalla; y `/espacios` por dirección
+directa redirige al panel.
+
+Lo que sí alcanza: los perfiles de quienes comparten espacio con él, es decir el
+equipo con el que trata. No alcanza a nadie de otro espacio.
 
 ## Correr en local
 

@@ -9,6 +9,7 @@ import { Avatar, Barra, Etiqueta, Modal, Vacio } from '../components/Piezas.jsx'
 import FormularioProyecto from '../components/FormularioProyecto.jsx'
 import ListaTareas from '../components/ListaTareas.jsx'
 import Entregas from '../components/Entregas.jsx'
+import Invitar from '../components/Invitar.jsx'
 import Commits from '../components/Commits.jsx'
 
 export default function DetalleProyecto() {
@@ -78,7 +79,7 @@ export default function DetalleProyecto() {
         <div>
           <h1>{proyecto.name}</h1>
           <div className="envuelve" style={{ marginTop: 8 }}>
-            {espacio && (
+            {espacio && !permisos.esCliente && (
               <Link className="chip linea" to={`/espacios/${espacio.id}`}>
                 <span className="punto-espacio" style={{ background: color(espacio.color) }} />
                 {espacio.name}
@@ -185,9 +186,17 @@ export default function DetalleProyecto() {
         <section className="tarjeta" style={{ marginTop: 14 }}>
           <h2 style={{ marginBottom: 12 }}>Acceso de clientes</h2>
           <p className="mini suave" style={{ marginTop: 0 }}>
-            Un cliente del espacio no ve nada hasta que se le da acceso a un
-            proyecto concreto, y solo ve ese.
+            Invita al cliente con el proyecto ya incluido: al entrar ve este
+            proyecto y nada más. No tiene que registrarse primero ni esperar a
+            que lo asignes.
           </p>
+
+          <Invitar
+            espacioId={proyecto.space_id}
+            rol="cliente"
+            proyectos={[proyecto.id]}
+            texto="Correo del cliente…"
+          />
 
           {(() => {
             const conAcceso = clientesDe(proyecto.id)
@@ -195,15 +204,6 @@ export default function DetalleProyecto() {
               .filter((m) => m.role === 'cliente')
             const yaTienen = new Set(conAcceso.map((c) => c.user_id))
             const disponibles = clientesDelEspacio.filter((m) => !yaTienen.has(m.user_id))
-
-            if (clientesDelEspacio.length === 0) {
-              return (
-                <p className="suave mini" style={{ marginBottom: 0 }}>
-                  Este espacio no tiene miembros con rol de cliente todavía.
-                  Agrégalos desde <Link to={`/espacios/${proyecto.space_id}`}>la ficha del espacio</Link>.
-                </p>
-              )
-            }
 
             return (
               <>

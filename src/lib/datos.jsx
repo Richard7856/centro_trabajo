@@ -7,6 +7,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { supabase } from './supabase.js'
 import { useSesion } from './sesion.jsx'
+import { olvidarToken, tokenGuardado } from './invitacion.js'
 import { permisos } from '../data/modelo.js'
 
 const DatosContexto = createContext(null)
@@ -78,6 +79,27 @@ export function ProveedorDatos({ children }) {
 
   useEffect(() => { recargar() }, [recargar])
 
+  // Canje de la invitación. Se hace aquí y no al registrarse porque si el
+  // proyecto exige confirmar el correo, en ese momento todavía no hay sesión.
+  useEffect(() => {
+    const token = tokenGuardado()
+    if (!usuarioId || !token) return
+    let vivo = true
+    supabase.rpc('aceptar_invitacion', { p_token: token }).then(({ data, error: err }) => {
+      if (!vivo) return
+      // Si es de otro correo se conserva: quizá entró con la cuenta equivocada
+      // y al cambiar de sesión sí le corresponde.
+      if (!err && data?.estado !== 'otro_correo') olvidarToken()
+      if (data?.estado === 'aceptada') recargar()
+      else if (data?.estado === 'otro_correo') {
+        setError(
+          `Esta invitación es para ${data.esperado}. Cierra sesión y entra con ese correo.`,
+        )
+      }
+    })
+    return () => { vivo = false }
+  }, [usuarioId, recargar])
+
   const api = useMemo(() => {
     const {
       espacios, miembros, proyectos, tareas, personas,
@@ -142,6 +164,19 @@ export function ProveedorDatos({ children }) {
         escribir(supabase.from('spaces').update(campos).eq('id', id)),
       eliminarEspacio: (id) =>
         escribir(supabase.from('spaces').delete().eq('id', id)),
+
+      // Genera un enlace de invitación que ya lleva dentro el espacio, el rol y
+      // los proyectos: quien lo abre se registra y entra viendo lo suyo.
+      crearInvitacion: async (space_id, email, rol, proyectos = []) => {
+        const { data, error: err } = await supabase.rpc('crear_invitacion', {
+          p_space: space_id, p_email: email, p_rol: rol, p_proyectos: proyectos,
+        })
+        if (err) throw new Error(traducir(err))
+        return {
+          ...data,
+          enlace: `${window.location.origin}/?inv=${data.token}`,
+        }
+      },
 
       // Suma a alguien por su correo. Devuelve 'sin_cuenta' si esa persona
       // todavía no se ha registrado, para poder decírselo con claridad.

@@ -1,7 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useSesion } from '../lib/sesion.jsx'
-import { configurado } from '../lib/supabase.js'
+import { configurado, supabase } from '../lib/supabase.js'
 import Marca from '../components/Marca.jsx'
+import {
+  MENSAJES, guardarToken, limpiarUrl, tokenDeLaUrl, tokenGuardado,
+} from '../lib/invitacion.js'
 
 export default function Entrar() {
   const { entrar, registrar, recuperar } = useSesion()
@@ -11,6 +14,25 @@ export default function Entrar() {
   const [nombre, setNombre] = useState('')
   const [aviso, setAviso] = useState(null)
   const [ocupado, setOcupado] = useState(false)
+  const [invitacion, setInvitacion] = useState(null)
+
+  // Si se llegó por un enlace de invitación, se lee para saber a nombre de qué
+  // correo va y para poder decir a qué se invita antes de pedir nada.
+  useEffect(() => {
+    const token = tokenDeLaUrl() || tokenGuardado()
+    if (!token || !configurado) return
+    guardarToken(token)
+    limpiarUrl()
+    supabase.rpc('ver_invitacion', { p_token: token }).then(({ data }) => {
+      if (!data) return
+      setInvitacion(data)
+      if (data.estado === 'valida') {
+        setEmail(data.email)
+        // Quien recibe una invitación casi siempre no tiene cuenta todavía.
+        setModo('registrar')
+      }
+    })
+  }, [])
 
   if (!configurado) {
     return (
@@ -65,13 +87,33 @@ export default function Entrar() {
           </div>
         </div>
 
+        {invitacion?.estado === 'valida' && (
+          <div className="aviso" style={{ marginBottom: 16 }}>
+            <span>
+              <strong>Te invitaron a colaborar.</strong>
+              {invitacion.proyectos?.length > 0 && (
+                <> Vas a entrar a {invitacion.proyectos.join(', ')}.</>
+              )}{' '}
+              Crea tu cuenta con <strong>{invitacion.email}</strong>.
+            </span>
+          </div>
+        )}
+
+        {invitacion && invitacion.estado !== 'valida' && (
+          <div className="aviso alerta" style={{ marginBottom: 16 }}>
+            {MENSAJES[invitacion.estado] ?? 'Ese enlace de invitación no sirve.'}
+          </div>
+        )}
+
         <h1 style={{ fontSize: 18, marginBottom: 4 }}>
           {modo === 'entrar' && 'Inicia sesión'}
           {modo === 'registrar' && 'Crea tu cuenta'}
           {modo === 'recuperar' && 'Recupera tu acceso'}
         </h1>
         <p className="mini suave" style={{ marginTop: 0, marginBottom: 18 }}>
-          Cada quien ve únicamente los espacios de los que es miembro.
+          {invitacion?.estado === 'valida'
+            ? 'En cuanto entres verás tu proyecto, y solo el tuyo.'
+            : 'Cada quien ve únicamente aquello a lo que se le da acceso.'}
         </p>
 
         {modo === 'registrar' && (
@@ -88,9 +130,15 @@ export default function Entrar() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            autoFocus
+            autoFocus={invitacion?.estado !== 'valida'}
             autoComplete="email"
+            readOnly={invitacion?.estado === 'valida'}
           />
+          {invitacion?.estado === 'valida' && (
+            <span className="mini suave">
+              La invitación va a nombre de este correo; con otro no se activa.
+            </span>
+          )}
         </div>
 
         {modo !== 'recuperar' && (
