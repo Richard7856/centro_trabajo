@@ -29,9 +29,9 @@ function celdas(anio, mes) {
 }
 
 const TIPOS = {
-  entrega: { nombre: 'Entregas', color: '#7c3aed' },
-  tarea: { nombre: 'Tareas', color: '#2563eb' },
-  cobro: { nombre: 'Cobros', color: '#16a34a' },
+  entrega: { nombre: 'Entregas', color: 'var(--c-morado)' },
+  tarea: { nombre: 'Tareas', color: 'var(--c-azul)' },
+  cobro: { nombre: 'Cobros', color: 'var(--c-verde)' },
 }
 
 export default function Calendario() {

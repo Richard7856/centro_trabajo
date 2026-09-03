@@ -3,29 +3,29 @@
 // la escritura, que es justo lo que queremos.
 
 export const ESTADOS_PROYECTO = [
-  { id: 'activo', nombre: 'Activo', color: '#2563eb' },
-  { id: 'pausado', nombre: 'Pausado', color: '#d97706' },
-  { id: 'completado', nombre: 'Completado', color: '#16a34a' },
-  { id: 'cancelado', nombre: 'Cancelado', color: '#dc2626' },
+  { id: 'activo', nombre: 'Activo', color: 'var(--c-azul)' },
+  { id: 'pausado', nombre: 'Pausado', color: 'var(--c-ambar)' },
+  { id: 'completado', nombre: 'Completado', color: 'var(--c-verde)' },
+  { id: 'cancelado', nombre: 'Cancelado', color: 'var(--c-rojo)' },
 ]
 
 export const ESTADOS_TAREA = [
-  { id: 'inbox', nombre: 'Solicitud', color: '#7c3aed' },
-  { id: 'pendiente', nombre: 'Pendiente', color: '#6b7280' },
-  { id: 'en_progreso', nombre: 'En progreso', color: '#2563eb' },
-  { id: 'bloqueada', nombre: 'Bloqueada', color: '#dc2626' },
-  { id: 'completada', nombre: 'Completada', color: '#16a34a' },
-  { id: 'descartada', nombre: 'Descartada', color: '#9ca3af' },
+  { id: 'inbox', nombre: 'Solicitud', color: 'var(--c-morado)' },
+  { id: 'pendiente', nombre: 'Pendiente', color: 'var(--c-gris)' },
+  { id: 'en_progreso', nombre: 'En progreso', color: 'var(--c-azul)' },
+  { id: 'bloqueada', nombre: 'Bloqueada', color: 'var(--c-rojo)' },
+  { id: 'completada', nombre: 'Completada', color: 'var(--c-verde)' },
+  { id: 'descartada', nombre: 'Descartada', color: 'var(--c-gris)' },
 ]
 
 // Las que siguen pidiendo trabajo.
 export const TAREAS_ABIERTAS = ['inbox', 'pendiente', 'en_progreso', 'bloqueada']
 
 export const PRIORIDADES = [
-  { id: 'urgente', nombre: 'Urgente', color: '#b91c1c' },
-  { id: 'alta', nombre: 'Alta', color: '#dc2626' },
-  { id: 'media', nombre: 'Media', color: '#d97706' },
-  { id: 'baja', nombre: 'Baja', color: '#16a34a' },
+  { id: 'urgente', nombre: 'Urgente', color: 'var(--c-rojo-fuerte)' },
+  { id: 'alta', nombre: 'Alta', color: 'var(--c-rojo)' },
+  { id: 'media', nombre: 'Media', color: 'var(--c-ambar)' },
+  { id: 'baja', nombre: 'Baja', color: 'var(--c-verde)' },
 ]
 
 export const PESO_PRIORIDAD = { urgente: 0, alta: 1, media: 2, baja: 3 }
@@ -34,25 +34,25 @@ export const ROLES = [
   {
     id: 'owner',
     nombre: 'Dueño',
-    color: '#7c3aed',
+    color: 'var(--c-morado)',
     descripcion: 'Administra el espacio, sus miembros y todos sus proyectos.',
   },
   {
     id: 'socio',
     nombre: 'Socio',
-    color: '#2563eb',
+    color: 'var(--c-azul)',
     descripcion: 'Ve y gestiona todos los proyectos del espacio. No administra miembros.',
   },
   {
     id: 'invitado',
     nombre: 'Invitado',
-    color: '#0891b2',
+    color: 'var(--c-cian)',
     descripcion: 'Consulta todo el espacio y puede levantar solicitudes, no cerrarlas.',
   },
   {
     id: 'cliente',
     nombre: 'Cliente',
-    color: '#ea580c',
+    color: 'var(--c-naranja)',
     descripcion: 'Solo los proyectos donde se le da acceso. No ve el resto del espacio ni el dinero.',
   },
 ]
@@ -65,19 +65,19 @@ export const TIPOS_ESPACIO = [
 
 // La base guarda el color por nombre; aquí se traduce a algo que se pueda pintar.
 export const COLORES = {
-  slate: '#64748b',
-  indigo: '#4f46e5',
-  violet: '#7c3aed',
-  cyan: '#0891b2',
-  emerald: '#059669',
-  amber: '#d97706',
-  rose: '#e11d48',
+  slate: 'var(--e-slate)',
+  indigo: 'var(--e-indigo)',
+  violet: 'var(--e-violet)',
+  cyan: 'var(--e-cyan)',
+  emerald: 'var(--e-emerald)',
+  amber: 'var(--e-amber)',
+  rose: 'var(--e-rose)',
 }
 
 export const color = (nombre) => COLORES[nombre] ?? COLORES.slate
 
 const porId = (catalogo) => (id) =>
-  catalogo.find((item) => item.id === id) || { id, nombre: id ?? '—', color: '#6b7280' }
+  catalogo.find((item) => item.id === id) || { id, nombre: id ?? '—', color: 'var(--c-gris)' }
 
 export const estadoProyecto = porId(ESTADOS_PROYECTO)
 export const estadoTarea = porId(ESTADOS_TAREA)
@@ -112,11 +112,11 @@ export function permisos(rolEspacio) {
 // ---------- Entregas ----------
 
 export const ESTADOS_ENTREGA = [
-  { id: 'planeada', nombre: 'Planeada', color: '#6b7280' },
-  { id: 'en_progreso', nombre: 'En progreso', color: '#2563eb' },
-  { id: 'entregada', nombre: 'Entregada', color: '#0891b2' },
-  { id: 'aprobada', nombre: 'Aprobada', color: '#16a34a' },
-  { id: 'cancelada', nombre: 'Cancelada', color: '#9ca3af' },
+  { id: 'planeada', nombre: 'Planeada', color: 'var(--c-gris)' },
+  { id: 'en_progreso', nombre: 'En progreso', color: 'var(--c-azul)' },
+  { id: 'entregada', nombre: 'Entregada', color: 'var(--c-cian)' },
+  { id: 'aprobada', nombre: 'Aprobada', color: 'var(--c-verde)' },
+  { id: 'cancelada', nombre: 'Cancelada', color: 'var(--c-gris)' },
 ]
 
 export const ENTREGAS_ABIERTAS = ['planeada', 'en_progreso']
@@ -132,16 +132,16 @@ export const CADENCIAS = [
 ]
 
 export const ESTADOS_SUSCRIPCION = [
-  { id: 'activa', nombre: 'Activa', color: '#16a34a' },
-  { id: 'pausada', nombre: 'Pausada', color: '#d97706' },
-  { id: 'cancelada', nombre: 'Cancelada', color: '#9ca3af' },
+  { id: 'activa', nombre: 'Activa', color: 'var(--c-verde)' },
+  { id: 'pausada', nombre: 'Pausada', color: 'var(--c-ambar)' },
+  { id: 'cancelada', nombre: 'Cancelada', color: 'var(--c-gris)' },
 ]
 
 export const ESTADOS_COBRO = [
-  { id: 'pendiente', nombre: 'Pendiente', color: '#6b7280' },
-  { id: 'pagado', nombre: 'Pagado', color: '#16a34a' },
-  { id: 'vencido', nombre: 'Vencido', color: '#dc2626' },
-  { id: 'cancelado', nombre: 'Cancelado', color: '#9ca3af' },
+  { id: 'pendiente', nombre: 'Pendiente', color: 'var(--c-gris)' },
+  { id: 'pagado', nombre: 'Pagado', color: 'var(--c-verde)' },
+  { id: 'vencido', nombre: 'Vencido', color: 'var(--c-rojo)' },
+  { id: 'cancelado', nombre: 'Cancelado', color: 'var(--c-gris)' },
 ]
 
 export const estadoEntrega = porIdEntrega(ESTADOS_ENTREGA)
@@ -151,7 +151,7 @@ export const estadoCobro = porIdEntrega(ESTADOS_COBRO)
 
 function porIdEntrega(catalogo) {
   return (id) =>
-    catalogo.find((item) => item.id === id) || { id, nombre: id ?? '—', color: '#6b7280' }
+    catalogo.find((item) => item.id === id) || { id, nombre: id ?? '—', color: 'var(--c-gris)' }
 }
 
 // Lo que factura una suscripción al año, para poder compararlas entre sí

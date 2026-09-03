@@ -216,6 +216,22 @@ dice qué falta, en lugar de un error opaco.
   `tasks.created_by`, que existe para no perder la autoría. Quitarla del espacio
   sí funciona.
 
+## Colores
+
+Los dos temas se definen como variables en `src/styles.css`. El claro es azul
+sobre gris muy claro; el oscuro es gris neutro sobre casi negro, con acento
+coral y el elemento activo del menú como pastilla clara.
+
+Los colores de estado (prioridades, estados de tarea, de entrega, de cobro) no
+son hexadecimales sueltos en el JavaScript: son variables `--c-*` que cada tema
+redefine. El mismo verde que se lee bien sobre blanco se pierde sobre un fondo
+casi negro, así que cada tema necesita su propia versión. Los catálogos de
+`src/data/modelo.js` las referencian por nombre, y como los componentes las
+aplican con `style`, el navegador resuelve la que toca.
+
+Lo mismo con los colores que distinguen un espacio (`--e-*`) y con la marca del
+maletín, que sigue al acento en vez de llevar el azul fijo.
+
 ## Estructura
 
 ```

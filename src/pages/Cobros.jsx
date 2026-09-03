@@ -87,8 +87,7 @@ export default function Cobros() {
         <Kpi etiqueta="Por cobrar (30 d)" valor={dinero(res.montoProximo, res.moneda)} />
       </div>
 
-      <div className="rejilla dos">
-        <section className="tarjeta">
+      <section className="tarjeta" style={{ marginBottom: 14 }}>
           <h2 style={{ marginBottom: 12 }}>Suscripciones</h2>
           {suscripciones.length === 0 ? (
             <p className="suave mini">
@@ -135,8 +134,9 @@ export default function Cobros() {
               </table>
             </div>
           )}
-        </section>
+      </section>
 
+      <div className="rejilla dos">
         <section className="tarjeta">
           <div className="entre" style={{ marginBottom: 12 }}>
             <h2>Calendario de cobro</h2>
@@ -185,10 +185,9 @@ export default function Cobros() {
             })
           )}
         </section>
-      </div>
 
-      {cobros.some((c) => c.status === 'pagado') && (
-        <section className="tarjeta" style={{ marginTop: 14 }}>
+        {cobros.some((c) => c.status === 'pagado') && (
+        <section className="tarjeta">
           <h2 style={{ marginBottom: 12 }}>Cobrado</h2>
           <p style={{ marginTop: 0 }}>
             <strong style={{ fontSize: 20 }}>{dinero(res.cobrado, res.moneda)}</strong>{' '}
@@ -209,7 +208,8 @@ export default function Cobros() {
             </table>
           </div>
         </section>
-      )}
+        )}
+      </div>
 
       {(creando || editando) && (
         <Modal
