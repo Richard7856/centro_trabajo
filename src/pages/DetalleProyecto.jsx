@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useDatos } from '../lib/datos.jsx'
-import { PESO_PRIORIDAD, color, estadoProyecto } from '../data/modelo.js'
+import { PESO_PRIORIDAD, color, esSugerencia, esTrabajo, estadoProyecto } from '../data/modelo.js'
 import { avance, tareasDe } from '../lib/calculos.js'
 import { repoTexto } from '../lib/repositorio.js'
 import { diasRestantes, formatearFecha } from '../lib/formato.js'
 import { Avatar, Barra, Etiqueta, Modal, Vacio } from '../components/Piezas.jsx'
 import FormularioProyecto from '../components/FormularioProyecto.jsx'
 import ListaTareas from '../components/ListaTareas.jsx'
+import Sugerencias from '../components/Sugerencias.jsx'
 import Entregas from '../components/Entregas.jsx'
 import Invitar from '../components/Invitar.jsx'
 import UltimoCambio from '../components/UltimoCambio.jsx'
@@ -42,12 +43,18 @@ export default function DetalleProyecto() {
 
   const permisos = permisosEn(proyecto.space_id)
   const espacio = espacios.find((e) => e.id === proyecto.space_id)
-  const propias = [...tareasDe(proyecto.id, todasLasTareas)].sort(
+  const delProyecto = tareasDe(proyecto.id, todasLasTareas)
+  const propias = delProyecto.filter(esTrabajo).sort(
     (a, b) =>
       Number(a.status === 'completada') - Number(b.status === 'completada') ||
       PESO_PRIORIDAD[a.priority] - PESO_PRIORIDAD[b.priority] ||
       (a.due_date || '9999').localeCompare(b.due_date || '9999'),
   )
+  const sugerencias = delProyecto.filter(esSugerencia).sort(
+    (a, b) => PESO_PRIORIDAD[a.priority] - PESO_PRIORIDAD[b.priority],
+  )
+  // El interruptor de "interna" solo aparece si hay alguien de fuera leyendo.
+  const clientesConAcceso = clientesDe(proyecto.id)
   const pct = avance(proyecto, todasLasTareas)
   const dias = diasRestantes(proyecto.due_date)
 
@@ -215,7 +222,7 @@ export default function DetalleProyecto() {
           />
 
           {(() => {
-            const conAcceso = clientesDe(proyecto.id)
+            const conAcceso = clientesConAcceso
             const clientesDelEspacio = miembrosDe(proyecto.space_id)
               .filter((m) => m.role === 'cliente')
             const yaTienen = new Set(conAcceso.map((c) => c.user_id))
@@ -274,6 +281,28 @@ export default function DetalleProyecto() {
         </section>
       )}
 
+      {permisos.gestionarTareas && (
+        <section className="tarjeta" style={{ marginTop: 14 }}>
+          <div className="entre" style={{ marginBottom: 4 }}>
+            <h2>Sugerencias de la IA</h2>
+            <span className="chip">{sugerencias.length}</span>
+          </div>
+          <p className="mini suave" style={{ marginTop: 0, marginBottom: 12 }}>
+            Ideas que salen de revisar el repositorio, los despliegues y la base.
+            No cuentan para el avance y el cliente no las recibe: son para ti y
+            para tu socio. Al aceptar una se vuelve tarea interna.
+          </p>
+          <Sugerencias
+            sugerencias={sugerencias}
+            onAceptar={(t) => intentar(() => guardarTarea({ id: t.id, status: 'pendiente' }))}
+            onDescartar={(t) =>
+              confirm(`¿Descartar "${t.title}"? Se borra de la lista.`) &&
+              intentar(() => eliminarTarea(t.id))
+            }
+          />
+        </section>
+      )}
+
       <section className="tarjeta" style={{ marginTop: 14 }}>
         <h2 style={{ marginBottom: 4 }}>Tareas</h2>
         {!permisos.gestionarTareas && (
@@ -301,6 +330,7 @@ export default function DetalleProyecto() {
         <ListaTareas
           tareas={propias}
           permisos={permisos}
+          mostrarVisibilidad={clientesConAcceso.length > 0}
           onCambiar={(t, campos) => intentar(() => guardarTarea({ id: t.id, ...campos }))}
           onEliminar={(t) => intentar(() => eliminarTarea(t.id))}
         />

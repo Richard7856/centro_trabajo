@@ -2,7 +2,8 @@ import { Link } from 'react-router-dom'
 import { useDatos } from '../lib/datos.jsx'
 import { useSesion } from '../lib/sesion.jsx'
 import {
-  ESTADOS_PROYECTO, color, dinero, estadoProyecto, rol as rolPorId,
+  ESTADOS_PROYECTO, color, dinero, esSugerencia, esTrabajo, estadoProyecto,
+  rol as rolPorId,
 } from '../data/modelo.js'
 import {
   avance, entregasEnRiesgo, ingresos, resumen, resumenCobros, vencimientos,
@@ -53,7 +54,8 @@ export default function Panel() {
 
   const r = resumen(proyectos, tareas)
   const proximos = vencimientos(proyectos, tareas).slice(0, 8)
-  const solicitudes = tareas.filter((t) => t.status === 'inbox')
+  const solicitudes = tareas.filter((t) => t.status === 'inbox' && esTrabajo(t))
+  const sugerencias = tareas.filter(esSugerencia)
   const riesgo = entregasEnRiesgo(entregas)
   const ing = ingresos(suscripciones)
   const cob = resumenCobros(cobros)
@@ -260,9 +262,17 @@ export default function Panel() {
                 style={{ padding: '8px 0', borderBottom: '1px solid var(--borde)' }}
               >
                 <span className="recorte">{t.title}</span>
-                <span className="chip">{t.origin === 'vigilante' ? 'Vigilante' : 'Solicitud'}</span>
+                <span className="chip">Solicitud</span>
               </Link>
             ))
+          )}
+          {sugerencias.length > 0 && (
+            <p className="mini suave" style={{ margin: '10px 0 0' }}>
+              {sugerencias.length === 1
+                ? 'Una sugerencia de la IA espera'
+                : `${sugerencias.length} sugerencias de la IA esperan`}{' '}
+              tu sí o tu no.
+            </p>
           )}
         </section>
       </div>

@@ -15,12 +15,12 @@ cero en todas las tablas, y un socio del espacio «Jose» recibe un solo espacio
 
 ## Roles
 
-| Rol | Alcance | Proyectos | Pedir | Agendar y cerrar | Ve el dinero | Miembros |
-|---|---|---|---|---|---|---|
-| Dueño | Todo el espacio | sí | sí | sí | sí | sí |
-| Socio | Todo el espacio | sí | sí | sí | sí | no |
-| Invitado | Todo el espacio | no | sí | no | no | no |
-| Cliente | **Solo los proyectos donde se le da acceso** | no | sí | no | no | no |
+| Rol | Alcance | Proyectos | Pedir | Agendar y cerrar | Ve el dinero | Ve lo interno | Miembros |
+|---|---|---|---|---|---|---|---|
+| Dueño | Todo el espacio | sí | sí | sí | sí | sí | sí |
+| Socio | Todo el espacio | sí | sí | sí | sí | sí | no |
+| Invitado | Todo el espacio | no | sí | no | no | no | no |
+| Cliente | **Solo los proyectos donde se le da acceso** | no | sí | no | no | no | no |
 
 Lo impiden las políticas, no los botones. Comprobado con cuentas de prueba en
 un mismo espacio con dos proyectos:
@@ -45,6 +45,38 @@ Tres cosas distintas a propósito:
 - **Tareas** (`tasks`): el trabajo para llegar a esas entregas. Una tarea sin
   proyecto es trabajo suelto del espacio y nunca la ve un cliente.
 - **Cobros** (`subscriptions` + `subscription_charges`): lo que se factura.
+
+### Trabajo interno y sugerencias de la IA
+
+Dentro de las tareas hay dos cosas que no se le enseñan a quien contrató el
+producto, y las separan dos columnas de `tasks`:
+
+- `visible_cliente = false` marca **trabajo interno**. «Corregir la vista que se
+  salta las políticas» es cierto y hay que hacerlo, pero no es material de
+  cliente. Solo lo alcanza quien administra el espacio: ni el cliente ni un
+  invitado. En la ficha del proyecto, y solo si hay un cliente con acceso,
+  aparece un interruptor por tarea para pasarla de interna a visible.
+- `origin` dice de dónde salió: `persona` la escribió alguien; `agente` y
+  `vigilante` las propuso la IA revisando el repositorio, los despliegues o la
+  base. Una tarea de IA todavía en `inbox` es una **sugerencia**: se pinta en su
+  propia sección, no cuenta para el avance y espera un sí o un no. **Aceptar**
+  la vuelve pendiente conservando su origen; **descartar** la borra.
+
+Que no cuenten para el avance no es cosmético: el cliente no las recibe, así
+que si contaran, él y nosotros veríamos porcentajes distintos del mismo
+proyecto.
+
+Comprobado por impersonación en la base, con el proyecto de un socio que tiene
+8 tareas reales y 7 sugerencias: dueño y socio reciben 8 y 7; el cliente recibe
+8 y **0**; un invitado del mismo espacio también recibe **0** sugerencias. El
+cliente tampoco puede fabricarlas: un `insert` suyo con `origin = 'agente'` o
+con `visible_cliente = false` lo rechaza la política con 42501, y su solicitud
+normal sí pasa. Al aceptar una sugerencia sigue siendo interna, así que el
+cliente tampoco la ve después.
+
+Las sugerencias no se escriben desde la aplicación: las deja un agente contra
+la base. La forma de una fila es
+`status = 'inbox'`, `origin = 'agente'`, `visible_cliente = false`.
 
 Los cobros no se calculan al vuelo: `generar_cobros()` crea una fila por
 periodo, así el calendario, los vencidos y lo cobrado salen del mismo sitio. El
@@ -256,12 +288,15 @@ src/
 │   ├── sesion.jsx       Inicio de sesión y perfil
 │   ├── datos.jsx        Lectura y escritura contra la base
 │   ├── calculos.js      Avance, resumen y vencimientos
-│   ├── github.js        Lectura de commits
+│   ├── repositorio.js   Último cambio, documento de avance e imágenes
+│   ├── invitacion.js    El token del enlace de invitación
 │   └── formato.js       Fechas, iniciales y colores
 ├── data/modelo.js       Catálogos (idénticos a los enums) y permisos
-├── components/          Piezas, formularios, tareas, entregas, commits
+├── components/          Piezas, formularios, tareas, sugerencias, entregas,
+│                        enlaces, avance y último cambio
 └── pages/               Entrar, Panel, Espacios, Proyectos, Bandeja,
                          Calendario, Cobros, Ajustes
 
-supabase/migraciones/    Esquema, políticas, siembra y endurecimiento
+supabase/functions/      commits: último cambio, documento e imágenes
+supabase/migraciones/    Esquema, políticas y endurecimiento
 ```

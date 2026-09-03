@@ -1,9 +1,15 @@
-import { ESTADOS_TAREA, PRIORIDADES, estadoTarea, prioridad } from '../data/modelo.js'
+import { ESTADOS_TAREA, ORIGENES_IA, PRIORIDADES, estadoTarea, prioridad } from '../data/modelo.js'
 import { diasRestantes, formatearFecha } from '../lib/formato.js'
 import { Etiqueta } from './Piezas.jsx'
 
 // Lista de tareas reutilizada por la ficha del proyecto y por la bandeja.
-export default function ListaTareas({ tareas, permisos, onCambiar, onEliminar, mostrarProyecto, nombreProyecto }) {
+//
+// `mostrarVisibilidad` solo se enciende donde hay un cliente con acceso: si
+// nadie de fuera va a leer la lista, el interruptor de "interna" sobra.
+export default function ListaTareas({
+  tareas, permisos, onCambiar, onEliminar,
+  mostrarProyecto, nombreProyecto, mostrarVisibilidad,
+}) {
   if (tareas.length === 0) return <p className="suave mini">Sin tareas.</p>
 
   return (
@@ -25,7 +31,24 @@ export default function ListaTareas({ tareas, permisos, onCambiar, onEliminar, m
               <div className={hecha ? 'tachado' : ''}>
                 {t.title}
                 {t.status === 'inbox' && <span className="chip" style={{ marginLeft: 6 }}>Sin revisar</span>}
-                {t.origin === 'vigilante' && <span className="chip" style={{ marginLeft: 6 }}>Vigilante</span>}
+                {ORIGENES_IA.includes(t.origin) && (
+                  <span className="chip" style={{ marginLeft: 6 }}>
+                    {t.origin === 'vigilante' ? 'Vigilante' : 'IA'}
+                  </span>
+                )}
+                {mostrarVisibilidad && permisos.gestionarTareas && (
+                  <button
+                    type="button"
+                    className={`interruptor ${t.visible_cliente ? '' : 'apagado'}`}
+                    style={{ marginLeft: 6 }}
+                    title={t.visible_cliente
+                      ? 'El cliente ve esta tarea. Clic para volverla interna.'
+                      : 'Trabajo interno: el cliente no la recibe. Clic para mostrársela.'}
+                    onClick={() => onCambiar(t, { visible_cliente: !t.visible_cliente })}
+                  >
+                    {t.visible_cliente ? 'visible' : 'Interna'}
+                  </button>
+                )}
               </div>
               {t.description && <div className="mini suave">{t.description}</div>}
               <span className="mini suave">

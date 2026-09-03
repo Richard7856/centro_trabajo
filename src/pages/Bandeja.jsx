@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useDatos } from '../lib/datos.jsx'
-import { PESO_PRIORIDAD, TAREAS_ABIERTAS, color } from '../data/modelo.js'
+import { PESO_PRIORIDAD, TAREAS_ABIERTAS, color, esSugerencia, esTrabajo } from '../data/modelo.js'
 import { Vacio } from '../components/Piezas.jsx'
 import ListaTareas from '../components/ListaTareas.jsx'
+import Sugerencias from '../components/Sugerencias.jsx'
 
 // Todo lo que pide atención, en un solo lugar: solicitudes sin revisar primero,
 // luego el trabajo abierto ordenado por prioridad y fecha.
@@ -29,9 +30,13 @@ export default function Bandeja() {
         (a.due_date || '9999').localeCompare(b.due_date || '9999'),
     )
 
-  const solicitudes = ordenar(tareas.filter((t) => t.status === 'inbox'))
+  // Lo que propone la IA va aparte de lo que pide una persona: son cosas
+  // distintas y se responden distinto. La base solo se las manda a quien
+  // administra el espacio, así que si esta lista trae algo, es de los suyos.
+  const sugerencias = ordenar(tareas.filter(esSugerencia))
+  const solicitudes = ordenar(tareas.filter((t) => t.status === 'inbox' && esTrabajo(t)))
   const enCurso = ordenar(
-    tareas.filter((t) => TAREAS_ABIERTAS.includes(t.status) && t.status !== 'inbox'),
+    tareas.filter((t) => esTrabajo(t) && TAREAS_ABIERTAS.includes(t.status) && t.status !== 'inbox'),
   )
 
   // Los permisos son por espacio; en la bandeja se mezclan varios.
@@ -81,6 +86,29 @@ export default function Bandeja() {
         <>
           {bloque('Solicitudes sin revisar', solicitudes,
             'Nada por revisar. Las solicitudes llegan aquí antes de agendarse.')}
+
+          {sugerencias.length > 0 && (
+            <section className="tarjeta" style={{ marginTop: 14 }}>
+              <div className="entre" style={{ marginBottom: 4 }}>
+                <h2>Sugerencias de la IA</h2>
+                <span className="chip">{sugerencias.length}</span>
+              </div>
+              <p className="mini suave" style={{ marginTop: 0, marginBottom: 12 }}>
+                Solo las ves tú y quien administra el espacio contigo.
+              </p>
+              <Sugerencias
+                sugerencias={sugerencias}
+                mostrarProyecto
+                nombreProyecto={nombreProyecto}
+                onAceptar={(t) => intentar(() => guardarTarea({ id: t.id, status: 'pendiente' }))}
+                onDescartar={(t) =>
+                  confirm(`¿Descartar "${t.title}"? Se borra de la lista.`) &&
+                  intentar(() => eliminarTarea(t.id))
+                }
+              />
+            </section>
+          )}
+
           {bloque('En curso', enCurso, 'Sin trabajo abierto.')}
         </>
       )}

@@ -1,21 +1,28 @@
 // Cálculos derivados. Se mantienen fuera de las vistas para que el Panel y el
 // detalle de un proyecto no puedan mostrar números distintos.
 
-import { ENTREGAS_ABIERTAS, TAREAS_ABIERTAS, anualizado } from '../data/modelo.js'
+import { ENTREGAS_ABIERTAS, TAREAS_ABIERTAS, anualizado, esSugerencia, esTrabajo } from '../data/modelo.js'
 import { diasRestantes } from './formato.js'
 
 export const tareasDe = (proyectoId, tareas) =>
   tareas.filter((t) => t.project_id === proyectoId)
 
+// El trabajo comprometido del proyecto. Las sugerencias de la IA quedan fuera
+// a propósito: todavía no las acepta nadie, y como el cliente ni siquiera las
+// recibe, si contaran él y nosotros veríamos porcentajes distintos.
+export const trabajoDe = (proyectoId, tareas) =>
+  tareasDe(proyectoId, tareas).filter(esTrabajo)
+
 // El avance sale de las tareas del proyecto; sin tareas, solo cuenta su estado.
 export function avance(proyecto, tareas) {
-  const propias = tareasDe(proyecto.id, tareas).filter((t) => t.status !== 'descartada')
+  const propias = trabajoDe(proyecto.id, tareas).filter((t) => t.status !== 'descartada')
   if (propias.length === 0) return proyecto.status === 'completado' ? 100 : 0
   const hechas = propias.filter((t) => t.status === 'completada').length
   return Math.round((hechas / propias.length) * 100)
 }
 
-export const abiertas = (tareas) => tareas.filter((t) => TAREAS_ABIERTAS.includes(t.status))
+export const abiertas = (tareas) =>
+  tareas.filter((t) => esTrabajo(t) && TAREAS_ABIERTAS.includes(t.status))
 
 export function resumen(proyectos, tareas) {
   return {
@@ -23,7 +30,8 @@ export function resumen(proyectos, tareas) {
     activos: proyectos.filter((p) => p.status === 'activo').length,
     completados: proyectos.filter((p) => p.status === 'completado').length,
     abiertas: abiertas(tareas).length,
-    solicitudes: tareas.filter((t) => t.status === 'inbox').length,
+    solicitudes: tareas.filter((t) => t.status === 'inbox' && esTrabajo(t)).length,
+    sugerencias: tareas.filter(esSugerencia).length,
   }
 }
 
@@ -40,7 +48,7 @@ export function vencimientos(proyectos, tareas, dias = 14) {
   }
 
   for (const t of tareas) {
-    if (!TAREAS_ABIERTAS.includes(t.status)) continue
+    if (!TAREAS_ABIERTAS.includes(t.status) || esSugerencia(t)) continue
     const d = diasRestantes(t.due_date)
     if (d !== null && d <= dias) {
       items.push({
@@ -77,7 +85,7 @@ export function agenda({ entregas = [], tareas = [], cobros = [], proyectos = []
   }
 
   for (const t of tareas) {
-    if (!t.due_date) continue
+    if (!t.due_date || esSugerencia(t)) continue
     items.push({
       tipo: 'tarea',
       id: t.id,

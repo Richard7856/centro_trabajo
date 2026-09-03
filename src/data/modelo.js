@@ -21,6 +21,19 @@ export const ESTADOS_TAREA = [
 // Las que siguen pidiendo trabajo.
 export const TAREAS_ABIERTAS = ['inbox', 'pendiente', 'en_progreso', 'bloqueada']
 
+// De dónde salió la tarea. 'persona' es alguien escribiéndola; las otras dos
+// las propone la IA revisando el repositorio, los despliegues o la base.
+export const ORIGENES_IA = ['agente', 'vigilante']
+
+// Una sugerencia es una propuesta que todavía nadie aceptó. Se guarda con
+// visible_cliente = false, así que la base ya se la esconde al cliente; esto
+// solo sirve para acomodarlas en su propia sección.
+export const esSugerencia = (t) => ORIGENES_IA.includes(t.origin) && t.status === 'inbox'
+
+// Lo que de verdad es trabajo del proyecto: cuenta para el avance y para los
+// números del panel. Una sugerencia no cuenta hasta que se acepta.
+export const esTrabajo = (t) => !esSugerencia(t)
+
 export const PRIORIDADES = [
   { id: 'urgente', nombre: 'Urgente', color: 'var(--c-rojo-fuerte)' },
   { id: 'alta', nombre: 'Alta', color: 'var(--c-rojo)' },
