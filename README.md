@@ -145,10 +145,24 @@ Estaba concedida a cualquier sesión iniciada, así que un socio o un cliente
 entrando por primera vez podía quedarse con su propia copia de los cinco
 espacios y las 23 tareas. Ya cumplió su función de arranque.
 
+## Lo que ve el cliente en un proyecto
+
+La ficha está ordenada para quien no es técnico:
+
+1. **Enlaces** — el sitio, el panel, la demo. Lo primero que busca.
+2. **Último cambio** — una línea: qué se hizo y cuándo. El mensaje del commit se
+   limpia antes de mostrarlo (`feat(admin): panel interno` → *Panel interno*).
+   El historial con sha queda detrás de «Ver historial», solo para quien manda.
+3. **Avance** — un Markdown del repositorio, con sus capturas. Ver
+   [docs/documento-de-avance.md](docs/documento-de-avance.md): incluye la
+   plantilla y el encargo que se le pasa al agente para que lo mantenga.
+4. **Entregas**, y por último **Tareas**, donde el cliente pide cosas.
+
+La dirección del repositorio solo la ve quien administra.
+
 ## GitHub
 
-Cada proyecto guarda su `repo_url` y la ficha lista los últimos commits: quién,
-qué y cuándo, con enlace a GitHub.
+Cada proyecto guarda su `repo_url`.
 
 La lectura no sale del navegador, sino de la función `commits`
 (`supabase/functions/commits/`). Está así por dos razones:

@@ -3,14 +3,16 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useDatos } from '../lib/datos.jsx'
 import { PESO_PRIORIDAD, color, estadoProyecto } from '../data/modelo.js'
 import { avance, tareasDe } from '../lib/calculos.js'
-import { repoTexto } from '../lib/github.js'
+import { repoTexto } from '../lib/repositorio.js'
 import { diasRestantes, formatearFecha } from '../lib/formato.js'
 import { Avatar, Barra, Etiqueta, Modal, Vacio } from '../components/Piezas.jsx'
 import FormularioProyecto from '../components/FormularioProyecto.jsx'
 import ListaTareas from '../components/ListaTareas.jsx'
 import Entregas from '../components/Entregas.jsx'
 import Invitar from '../components/Invitar.jsx'
-import Commits from '../components/Commits.jsx'
+import UltimoCambio from '../components/UltimoCambio.jsx'
+import Avance from '../components/Avance.jsx'
+import Enlaces from '../components/Enlaces.jsx'
 
 export default function DetalleProyecto() {
   const { id } = useParams()
@@ -109,6 +111,14 @@ export default function DetalleProyecto() {
 
       {error && <div className="aviso alerta">{error}</div>}
 
+      <section className="tarjeta" style={{ marginBottom: 14 }}>
+        <h2 style={{ marginBottom: 12 }}>Enlaces</h2>
+        <Enlaces
+          enlaces={proyecto.enlaces}
+          despliegue={{ url: proyecto.last_deploy_url }}
+        />
+      </section>
+
       <div className="rejilla dos">
         <section className="tarjeta">
           <h2 style={{ marginBottom: 12 }}>Ficha</h2>
@@ -132,37 +142,43 @@ export default function DetalleProyecto() {
                   )}
                 </td>
               </tr>
-              <tr>
-                <td className="suave">Repositorio</td>
-                <td className="mini">
-                  {proyecto.repo_url
-                    ? <a href={proyecto.repo_url} target="_blank" rel="noreferrer">{repoTexto(proyecto.repo_url)}</a>
-                    : <span className="suave">Sin vincular</span>}
-                </td>
-              </tr>
+              {permisos.editarProyecto && (
+                <tr>
+                  <td className="suave">Repositorio</td>
+                  <td className="mini">
+                    {proyecto.repo_url
+                      ? <a href={proyecto.repo_url} target="_blank" rel="noreferrer">{repoTexto(proyecto.repo_url)}</a>
+                      : <span className="suave">Sin vincular</span>}
+                  </td>
+                </tr>
+              )}
               <tr>
                 <td className="suave">Tareas</td>
                 <td>{propias.filter((t) => t.status === 'completada').length} de {propias.length} completadas</td>
               </tr>
-              {proyecto.last_deploy_url && (
-                <tr>
-                  <td className="suave">Último despliegue</td>
-                  <td className="mini">
-                    <a href={`https://${proyecto.last_deploy_url}`} target="_blank" rel="noreferrer">
-                      {proyecto.last_deploy_state ?? 'ver'}
-                    </a>
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
         </section>
 
         <section className="tarjeta">
-          <h2 style={{ marginBottom: 12 }}>Cambios en el repositorio</h2>
-          <Commits proyectoId={proyecto.id} repoUrl={proyecto.repo_url} />
+          <h2 style={{ marginBottom: 12 }}>Último cambio</h2>
+          <UltimoCambio
+            proyectoId={proyecto.id}
+            repoUrl={proyecto.repo_url}
+            permisos={permisos}
+            despliegue={{ estado: proyecto.last_deploy_state, url: proyecto.last_deploy_url }}
+          />
         </section>
       </div>
+
+      <section className="tarjeta" style={{ marginTop: 14 }}>
+        <h2 style={{ marginBottom: 12 }}>Avance</h2>
+        <Avance
+          proyectoId={proyecto.id}
+          docPath={proyecto.doc_path}
+          permisos={permisos}
+        />
+      </section>
 
       <section className="tarjeta" style={{ marginTop: 14 }}>
         <h2 style={{ marginBottom: 12 }}>Entregas</h2>
@@ -297,6 +313,8 @@ export default function DetalleProyecto() {
               id: proyecto.id, space_id: proyecto.space_id, name: proyecto.name,
               description: proyecto.description, status: proyecto.status,
               due_date: proyecto.due_date, repo_url: proyecto.repo_url,
+              enlaces: proyecto.enlaces ?? [], doc_path: proyecto.doc_path ?? '',
+              doc_rama: proyecto.doc_rama ?? '',
             }}
             espacios={espacios}
             onCancelar={() => setEditando(false)}
