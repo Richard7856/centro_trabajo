@@ -26,8 +26,8 @@ insert into public.tasks
    status, origin, visible_cliente, priority, created_by)
 values
   ('<espacio>', '<proyecto>',
-   'Corregir la vista contracts_admin: se salta las políticas',
-   'La vista corre como su dueño, así que cualquiera con sesión lee todos los contratos.',
+   'Corregir la vista de administración: se salta las políticas',
+   'Corre como su dueño, así que cualquiera con sesión lee todas las filas.',
    'inbox',        -- sin responder
    'agente',       -- 'vigilante' si la levantó una revisión automática
    false,          -- trabajo interno

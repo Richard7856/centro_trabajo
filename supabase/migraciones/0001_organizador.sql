@@ -1,7 +1,7 @@
 -- Centro de Trabajo — esquema del organizador.
 --
--- Copiado del proyecto "niddo", donde convivía con la aplicación de rentas en
--- producción. Aquí vive solo, sin compartir base ni usuarios con nada más.
+-- Copiado de la base donde convivía con una aplicación en producción. Aquí vive
+-- solo, sin compartir base ni usuarios con nada más.
 --
 -- La regla que sostiene todo: un espacio solo es visible para sus miembros.
 -- No es que la pantalla lo oculte; la base no entrega la fila.

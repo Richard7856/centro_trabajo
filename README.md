@@ -11,7 +11,7 @@ demás ni sabe que existen: ni sus proyectos, ni sus tareas, ni sus miembros.
 Y no es la pantalla la que lo esconde. La política de la base dice
 `spaces_select = is_space_member(id)`, así que a quien no es miembro la base
 sencillamente **no le entrega la fila**. Comprobado: una sesión anónima recibe
-cero en todas las tablas, y un socio del espacio «Jose» recibe un solo espacio.
+cero en todas las tablas, y el socio de un espacio recibe ese espacio y nada más.
 
 ## Roles
 

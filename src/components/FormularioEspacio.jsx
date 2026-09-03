@@ -25,7 +25,7 @@ export default function FormularioEspacio({ inicial, onGuardar, onCancelar }) {
   return (
     <form onSubmit={enviar}>
       <Campo etiqueta="Nombre del espacio *">
-        <input value={e.name} onChange={set('name')} autoFocus placeholder="Ej. Jaime" />
+        <input value={e.name} onChange={set('name')} autoFocus placeholder="Ej. Ana" />
       </Campo>
 
       <Campo etiqueta="Tipo">
